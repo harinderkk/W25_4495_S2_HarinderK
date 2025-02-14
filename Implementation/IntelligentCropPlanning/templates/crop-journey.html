@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+{% block content %}
+	<article class="media content-section">
+		<h1>Crop Selection</h1>
+	</article>
+	<article class="media content-section">
+	        <form action= "/crop-journey" method="POST">
+	        	<div class="form-group">
+	        		<label for="location">Enter Your Location:</label>
+	                <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York" required><br/>
+
+		            <label for="crop">Select the crop you wish to grow:  </label>
+		            <select class="form-select" aria-label="Default select example" id="crop" name="crop" required>
+		                <option selected>Open this select menu</option>
+		                <option value="rice">Rice</option>
+		                <option value="wheat">Wheat</option>
+		                <option value="maize">Maize</option>
+		                <option value="apple">Apple</option>
+		                <option value="banana">Banana</option>
+		                <option value="blackgram">Blackgram</option>
+		                <option value="chickpea">Chickpea</option>
+		                <option value="coconut">Coconut</option>
+		                <option value="coffee">Coffee</option>
+		                <option value="cotton">Cotton</option>
+		                <option value="grapes">Grapes</option>
+		                <option value="jute">Jute</option>
+		                <option value="kidneybeans">Kidney Beans</option>
+		                <option value="lentil">Lentil</option>
+		                <option value="mango">Mango</option>
+		                <option value="mothbeans">Moth Beans</option>
+		                <option value="mungbean">Mung Bean</option>
+		                <option value="muskmelon">Muskmelon</option>
+		                <option value="orange">Orange</option>
+		                <option value="papaya">Papaya</option>
+		                <option value="pigeonpeas">Pigeon Peas</option>
+		                <option value="pomegranate">Pomegranate</option>
+		                <option value="watermelon">Watermelon</option>
+		            </select>
+	        	</div>
+	        	<button type="submit" class="btn btn-primary">Submit</button>
+	        </form>
+	</article>
+	<!--selected_crop, temp_recommendation, soil_temp_recommendation, rainfall_recommendation,
+        ph_recommendation-->
+
+	{% if recommendations %}
+	<article class="media content-section">
+		<div class="soil-info">
+            <h3 class="info-title">Recommended actions for </h3><br/> <h3 class="info-title" style="color:#00A36C">{{ recommendations[0] }}</h3><br/>
+            <p>{{ recommendations[1] }}</p>
+            <p>{{ recommendations[2] }}</p>
+            <p>{{ recommendations[3] }}</p>
+            <p>{{ recommendations[4] }}</p>
+        </div>
+	</article>
+	{% endif %}
+	
+{% endblock content %}

@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+    <article class="media content-section">
+        <div class="container">
+        <h1>Get Weather and Soil Information</h1>
+        <form action="/weather" method="POST">
+            <div class="form-group">
+                <label for="location">Enter Your Location:</label>
+                <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Get Information</button><br/><br/>
+        </form>
+
+        <!-- Display Weather Information -->
+        
+        {% if weather_data %}
+        <article class="media content-section">
+        <div class="weather-info">
+            <h3 class="info-title">Weather Information</h3>
+            <p><strong>Temperature:</strong> {{ weather_data.temperature }}°C</p>
+            <p><strong>Humidity:</strong> {{ weather_data.humidity }}%</p>
+            <p><strong>Description:</strong> {{ weather_data.description }}</p>
+            <p><strong>Rainfall:</strong> {{ weather_data.rain }} m/s</p>
+        </div>
+        </article>
+        {% endif %}
+        
+
+        <!-- Display Soil Information -->
+        
+        {% if ph_value %}
+        <article class="media content-section">
+        <div class="soil-info">
+            <h3 class="info-title">Soil Information</h3>
+            <p><strong>pH Level:</strong> {{ ph_value }}</p>
+        </div>
+        </article>
+        {% endif %}
+    
+    </div>
+    </article>
+{% endblock content %}
+

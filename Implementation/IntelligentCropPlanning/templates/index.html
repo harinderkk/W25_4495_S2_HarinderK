@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block content %}
+        <article class="media content-section">
+          <h1>Welcome to Crop Recommendation</h1><br/>
+        </article>
+    
+        <article class="media content-section">
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="card" style="width: 18rem;">
+                    <img class="card-img-top" src="/static/weather.jpeg" alt="Card image cap">
+                    <div class="card-body">
+                        <h5 class="card-title">Check Weather and Soil Conditions</h5>
+                        <p class="card-text">Get real-time weather and soil information for your location with a single click.</p>
+                        <a href="/weather" class="btn btn-primary">Go</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6">
+                <div class="card" style="width: 18rem;">
+                    <img class="card-img-top" src="/static/crop_rec.jpeg" alt="Card image cap">
+                    <div class="card-body">
+                        <h5 class="card-title">Start Your Crop Journey</h5>
+                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
+                        <a href="/crop-journey" class="btn btn-primary">Go</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </article>
+        
+{% endblock content %}
+
+
+
+
