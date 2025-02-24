@@ -1,0 +1,24 @@
+Crop,Min Temp (°C),Max Temp (°C),Avg Temp (°C),Min Soil Temp (°C),Max Soil Temp (°C),Avg Soil Temp (°C),Water Needs (mm) - Month 1,Water Needs (mm) - Month 2,Water Needs (mm) - Month 3,Water Needs (mm) - Month 4,Water Needs (mm) - Month 5,Water Needs (mm) - Month 6,Water Needs (mm) - Month 7,Water Needs (mm) - Month 8,Water Needs (mm) - Month 9,Water Needs (mm) - Month 10,Water Needs (mm) - Month 11,Water Needs (mm) - Month 12,Growth Season (Months),Sunlight (hours/day),Fertilizer (NPK),Common Pests,NH_Planting_Start,NH_Planting_End,SH_Planting_Start,SH_Planting_End
+Apple,6,24,15,5,20,12,50,100,150,200,150,100,-1,-1,-1,-1,-1,-1,6,6-8,10-10-10,"Aphids, Codling Moth",2,4,10,12
+Banana,20,37,28,18,30,24,200,300,400,300,200,100,200,300,400,300,150,100,12,8-10,15-5-30,"Banana Weevil, Nematodes",10,12,4,6
+Blackgram,20,33,25,15,25,20,50,100,150,-1,-1,-1,-1,-1,-1,-1,-1,-1,3,6-8,5-10-10,"Pod Borer, Aphids",5,7,11,1
+Chickpea,10,25,18,8,20,14,50,100,150,100,-1,-1,-1,-1,-1,-1,-1,-1,4,6-8,3-4-5,"Pod Borer, Cutworms",3,5,9,11
+Coconut,20,38,28,18,30,24,200,300,400,300,200,100,200,300,400,300,150,120,12,8-10,8-2-12,"Rhinoceros Beetle, Mites",3,5,9,11
+Coffee,15,28,20,12,22,17,200,300,400,300,200,100,200,300,400,300,150,120,12,4-6,6-6-6,Coffee Berry Borer,6,8,12,2
+Cotton,20,35,28,18,30,24,200,300,400,300,200,-1,-1,-1,-1,-1,-1,-1,5,8-10,10-5-15,"Bollworm, Aphids",10,12,4,6
+Grapes,18,32,25,12,30,20,100,150,200,150,100,80,-1,-1,-1,-1,-1,-1,6,6-8,5-10-10,"Mealybug, Powdery Mildew",3,5,9,11
+Jute,20,35,28,18,30,24,200,300,400,300,-1,-1,-1,-1,-1,-1,-1,-1,4,6-8,4-2-3,"Stem Rot, Hairy Caterpillar",3,5,9,11
+Kidneybeans,15,30,22,12,25,18,100,150,200,150,-1,-1,-1,-1,-1,-1,-1,-1,4,6-8,2-3-2,"Bean Beetle, Aphids",4,6,10,12
+Lentil,10,25,18,8,20,14,50,100,150,100,-1,-1,-1,-1,-1,-1,-1,-1,4,6-8,2-3-1,"Aphids, Cutworm",3,5,9,11
+Maize,15,30,22,12,25,18,100,200,300,200,-1,-1,-1,-1,-1,-1,-1,-1,4,8-10,10-20-10,"Corn Borer, Armyworm",3,5,9,11
+Mango,17,40,28,18,30,24,200,300,400,300,200,100,200,300,400,300,150,100,12,8-10,6-6-6,"Fruit Fly, Anthracnose",5,7,11,1
+Mothbeans,20,30,25,15,25,20,50,100,150,-1,-1,-1,-1,-1,-1,-1,-1,-1,3,6-8,3-2-2,"Pod Borer, Whitefly",10,12,4,6
+Mungbean,20,30,25,15,25,20,50,100,150,-1,-1,-1,-1,-1,-1,-1,-1,-1,3,6-8,3-2-2,"Aphids, Leaf Miner",3,5,9,11
+Muskmelon,20,33,28,18,30,24,100,150,200,150,-1,-1,-1,-1,-1,-1,-1,-1,4,8-10,5-10-15,"Cucumber Beetle, Powdery Mildew",6,8,12,2
+Orange,15,30,22,12,25,18,100,150,200,150,100,80,-1,-1,-1,-1,-1,-1,6,6-8,6-3-3,"Citrus Canker, Aphids",6,8,12,2
+Papaya,20,35,28,18,30,24,200,300,400,300,200,100,200,300,400,300,150,100,12,6-8,10-10-10,"Fruit Fly, Mites",4,6,10,12
+Pigeonpeas,20,30,25,15,25,20,50,100,150,100,-1,-1,-1,-1,-1,-1,-1,-1,4,8-10,5-5-5,"Pod Borer, Wilt",3,5,9,11
+Pomegranate,15,30,22,12,25,18,100,150,200,150,100,80,-1,-1,-1,-1,-1,-1,6,6-8,8-8-8,"Fruit Borer, Aphids",3,5,9,11
+Rice,20,38,28,18,30,24,200,300,400,300,-1,-1,-1,-1,-1,-1,-1,-1,4,8-10,10-5-5,"Stem Borer, Blight",6,8,12,2
+Watermelon,20,35,28,18,30,24,100,150,200,150,-1,-1,-1,-1,-1,-1,-1,-1,4,8-10,5-10-10,"Cucumber Beetle, Aphids",3,5,9,11
+wheat,10,25,18,8,20,14,50,100,150,100,-1,-1,-1,-1,-1,-1,-1,-1,4,6-8,10-10-10,"Aphids, Rust, Powdery Mildew",10,12,4,6
