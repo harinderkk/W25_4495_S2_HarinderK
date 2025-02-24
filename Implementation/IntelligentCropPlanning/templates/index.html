@@ -1,7 +1,19 @@
 {% extends "layout.html" %}
 {% block content %}
         <article class="media content-section">
-          <h1>Welcome to Crop Recommendation</h1><br/>
+            <div style="position: relative; text-align: center; color: white;">
+                <img src="/static/background.jpeg" class="img-fluid" alt="Responsive image">
+                <div style="position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  transform: translate(-50%, -50%);
+                  color: white;
+                  font-size: 30px;">
+                  Welcome to Intelligent Crop Planning
+                </div>
+            </div>
+          <br/>
+          
         </article>
     
         <article class="media content-section">
@@ -16,7 +28,7 @@
                     </div>
                 </div>
             </div>
-
+            <!--
             <div class="col-sm-6">
                 <div class="card" style="width: 18rem;">
                     <img class="card-img-top" src="/static/crop_rec.jpeg" alt="Card image cap">
@@ -27,11 +39,19 @@
                     </div>
                 </div>
             </div>
+            -->
+            <div class="col-sm-6">
+                <div class="card" style="width: 18rem;">
+                    <img class="card-img-top" src="/static/crop_rec.jpeg" alt="Card image cap">
+                    <div class="card-body">
+                        <h5 class="card-title">Start Your Crop Journey </h5>
+                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
+                        <a href="/care-plan" class="btn btn-primary">Go</a>
+                    </div>
+                </div>
+            </div>
+
         </div>
         </article>
         
 {% endblock content %}
-
-
-
-
