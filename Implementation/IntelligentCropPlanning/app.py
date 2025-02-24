@@ -95,8 +95,13 @@ def get_ph_value(weather_data):
 
 # Get soil moisture and temprature ====================================================
 def fetch_soil_data_selenium(lon, lat):
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration (often needed for headless)
+    chrome_options.add_argument("--window-size=1920,1080") 
     
-    driver = webdriver.Chrome()  
+    driver = webdriver.Chrome(options=chrome_options)
 
     # Open the website
     url = f"https://soiltemperature.app/results?lat={lat}&lng={lon}"
