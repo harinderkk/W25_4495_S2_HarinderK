@@ -5,10 +5,10 @@ Student ID: 300363980
 
 # Running the Project
 
-# Start the Flask app: 
+Start the Flask app: 
 python app.py
 
-# Access the application:
+Access the application:
 Open your browser and go to http://127.0.0.1:5000
 You should see the homepage of the application.
 
