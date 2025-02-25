@@ -1,0 +1,7 @@
+# Installation Guide
+
+Step 1: Go to project folder
+Step 2: Run: python -m venv .venv
+Step 3: Run: . ./venv/bin.activate
+Step 4: Run: pip install flask
+Step 5: Run
