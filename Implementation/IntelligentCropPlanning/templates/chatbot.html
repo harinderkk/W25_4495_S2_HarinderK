@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<article class="media content-section">
+    <h2 class="mb-4">
+        <img src="/static/images/chatbot_text.png" alt="icon" style="width: 30px; height: 30px; vertical-align: middle;">
+        FarmAdvisor Bot
+    </h2>
+</article>
+    <div class="chat-box border rounded p-3 mb-3" style="height: auto; overflow-y: hidden; background-color: #f9f9f9;">
+        {% for message in chat_history %}
+            {% if message.role == 'user' %}
+                <div class="text-right mb-2">
+                    <span class="badge badge-primary">You</span>
+                    <div class="chat-bubble user-msg d-inline-block p-2 rounded bg-primary text-white">
+                        {{ message.content }}
+                    </div>
+                </div>
+            {% elif message.role == 'assistant' %}
+                <div class="text-left mb-2">
+                    <span class="badge badge-success">Bot</span>
+                    <div class="chat-bubble bot-msg d-inline-block p-2 rounded bg-light text-dark border">
+                        {{ message.content }}
+                    </div>
+                </div><br/>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <form action="/chatbot" method="post" class="form-inline">
+        <textarea name="user_input" class="form-control mr-2 flex-grow-1" rows="4" style="width: 90%;" placeholder="Ask a question about farming..." required></textarea>
+        <button type="submit" class="btn btn-success">Send</button>
+    </form>
+
+    <form action="/clear_chat" method="post" class="mt-2">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Clear Chat</button>
+    </form>
+
+{% endblock content %}
