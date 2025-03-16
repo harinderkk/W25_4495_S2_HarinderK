@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify, session, redirect
 import pandas as pd
 import requests
 from httpx import Client
@@ -9,9 +9,30 @@ from selenium.webdriver.common.by import By
 import time
 from datetime import datetime, timedelta
 import calendar
+import os
+from dotenv import load_dotenv
+import openai
+from openai import OpenAI
+from flask_session import Session
 
+app = Flask(__name__)
+
+#open weather api
 api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 
+load_dotenv()
+app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
+
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
+'''
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
+'''
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
     complete_url = base_url + 'q=' + location + '&appid=' + api_key + '&units=metric'
@@ -81,27 +102,47 @@ def get_ph_value(weather_data):
             },
         )
 
+
         json_multi = response_multi.json()
+
     
         #    Get the soil information for the phh2o property
         phh2o = json_multi["properties"]["layers"][1]
-    
-        # Get the ph 0.05 quantile value at depth 100-200cm
-        phh2o_value = phh2o["depths"][1]["values"]["Q0.05"]/10
 
+        if (
+            "properties" in json_multi
+            and "layers" in json_multi["properties"]
+            and len(json_multi["properties"]["layers"]) > 1
+        ):
+            phh2o = json_multi["properties"]["layers"][1]
+            
+            # Check if the phh2o layer contains the expected data
+            if (
+                "depths" in phh2o
+                and len(phh2o["depths"]) > 1
+                and "values" in phh2o["depths"][1]
+                and "Q0.05" in phh2o["depths"][1]["values"]
+            ):
+                phh2o_value = phh2o["depths"][1]["values"]["Q0.05"]
+                
+                # Check if the value is not None before dividing
+                if phh2o_value is not None:
+                    return phh2o_value / 10
         
-        return phh2o_value
+        # If any of the checks fail, return the default value of 5.8
+        return 5.8
 
 
 # Get soil moisture and temprature ====================================================
 def fetch_soil_data_selenium(lon, lat):
-
+    
     chrome_options = Options()
     chrome_options.add_argument("--headless")  # Run in headless mode
     chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration (often needed for headless)
     chrome_options.add_argument("--window-size=1920,1080") 
     
     driver = webdriver.Chrome(options=chrome_options)
+
 
     # Open the website
     url = f"https://soiltemperature.app/results?lat={lat}&lng={lon}"
@@ -142,7 +183,7 @@ def fetch_soil_data_selenium(lon, lat):
 
 #================App Routes=========================================================
 
-app = Flask(__name__)
+
 
 
 @app.route('/weather', methods=['GET', 'POST'])
@@ -167,132 +208,6 @@ def weather():
 @app.route('/')
 def home():
     return render_template('index.html')
-
-
-
-
-@app.route('/crop-journey', methods=['GET', 'POST'])
-def crop_selection():
-    recommendations =""
-    if request.method == 'POST':
-        selected_crop = request.form['crop']
-        location = request.form['location']
-        
-        weather_json= get_weather_data(api_key, location)
-        
-        if weather_json.get('cod') == 200:
-            weather_data = parse_weather_data(weather_json)
-        else:
-            weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
-        
-        air_temperature = weather_data.get('temperature')
-        humidity = weather_data.get('humidity')
-        rain = weather_data.get('rain')
-        lon = weather_data.get('lon')
-        lat = weather_data.get('lat')
-
-
-        print("data is " , lat, lon, air_temperature , humidity, rain)
-
-        ph_value = get_ph_value(weather_json)
-
-        soil_data = fetch_soil_data_selenium(lon,lat)
-        
-        # Filter data for depth 6 cm and soil-specific data
-        depth_to_find = "6 cm"
-        filtered_data = [
-            data for data in soil_data 
-            if data['depth'] == depth_to_find 
-            and '°C' in data['temperature']  # Ensure it's temperature in °C
-            and 'm³/m³' in data['moisture']  # Ensure it's moisture in m³/m³
-        ]
-
-        soil_temperature = None 
-        if filtered_data:
-            for data in filtered_data:
-                #soil_temperature = float(data['temperature'])
-                soil_temperature = float(re.findall(r"-?\d+\.?\d*", data['temperature'])[0])
-
-                #soil_moisture =  float(data['moisture'])
-                soil_moisture = float(re.findall(r"-?\d+\.?\d*", data['moisture'])[0])
-
-        else:
-            print(f"No soil data found for depth: {depth_to_find}")
-        
-
-        #==== using crop_conditoins csv to generate recommendations====
-
-
-        # Convert user input and dataset crop names to lowercase
-        selected_crop = selected_crop.lower()
-        df_crop_requirements = pd.read_csv('growth_conditions.csv')
-        df_crop_requirements['Crop'] = df_crop_requirements['Crop'].str.lower()
-
-        # Filter the DataFrame for the selected crop
-        crop_data_filtered = df_crop_requirements[df_crop_requirements['Crop'] == selected_crop]
-
-        # Check if the crop exists in the dataset
-        if crop_data_filtered.empty:
-            print(f"Error: '{selected_crop}' is not in the dataset. Please select a valid crop.")
-        else:
-            # Access the first row of the filtered DataFrame
-            crop_data = crop_data_filtered.iloc[0]
-
-
-
-        # Provide crop-specific information
-        growth_season = crop_data['Growth Season (Months)']
-        print(f"\nYou need {growth_season} months to sow, grow, and harvest {selected_crop}.")
-
-        min_temp = float(crop_data['Min Temp (°C)'])
-        max_temp = float(crop_data['Max Temp (°C)'])
-        min_soil_temp = float(crop_data['Min Soil Temp (°C)'])
-        max_soil_temp = float(crop_data['Max Soil Temp (°C)'])
-        ideal_ph_min = 6.0  # Example ideal pH range for most crops
-        ideal_ph_max = 7.0
-        water_needs = crop_data[['Water Needs (mm) - Month 1', 'Water Needs (mm) - Month 2', 'Water Needs (mm) - Month 3', 
-                                 'Water Needs (mm) - Month 4', 'Water Needs (mm) - Month 5', 'Water Needs (mm) - Month 6']].values
-        
-        # Compare temperature
-        if air_temperature < min_temp:
-            temp_recommendation = f"The current temperature ({air_temperature}°C) is too low for {selected_crop}. It requires a minimum temperature of {min_temp}°C. Consider growing in a greenhouse or during warmer months."
-        elif air_temperature > max_temp:
-            temp_recommendation = f"The current temperature ({air_temperature}°C) is too high for {selected_crop}. It requires a maximum temperature of {max_temp}°C. Consider providing shade or growing during cooler months."
-        else:
-            temp_recommendation = f"The current temperature ({air_temperature}°C) is ideal for {selected_crop}."
-
-        # Compare soil temperature
-        if soil_temperature < min_soil_temp:
-            soil_temp_recommendation = f"The current soil temperature ({soil_temperature}°C) is too low for {selected_crop}. It requires a minimum soil temperature of {min_soil_temp}°C. Consider using mulch or a soil heater."
-        elif soil_temperature > max_soil_temp:
-            soil_temp_recommendation = f"The current soil temperature ({soil_temperature}°C) is too high for {selected_crop}. It requires a maximum soil temperature of {max_soil_temp}°C. Consider cooling the soil with shade or irrigation."
-        else:
-            soil_temp_recommendation = f"The current soil temperature ({soil_temperature}°C) is ideal for {selected_crop}."
-
-        # Compare rainfall
-        if rain < water_needs[0]:  # Compare with Month 1 water needs
-            rainfall_recommendation = f"The current rainfall ({rain} mm) is insufficient for {selected_crop}. It requires {water_needs[0]} mm in the first month. Consider irrigating regularly."
-        else:
-            rainfall_recommendation = f"The current rainfall is sufficient for {selected_crop}."
-
-        # Compare soil pH
-        if ph_value < ideal_ph_min:
-            ph_recommendation = f"The soil pH ({ph_value}) is too acidic for {selected_crop}. Consider adding lime to raise the pH."
-        elif ph_value> ideal_ph_max:
-            ph_recommendation = f"The soil pH ({ph_value}) is too alkaline for {selected_crop}. Consider adding sulfur or organic matter to lower the pH."
-        else:
-            ph_recommendation = f"The soil pH is ideal for {selected_crop}."
-
-        # Provide recommendations
-        current_recommendations = [selected_crop, temp_recommendation, soil_temp_recommendation, rainfall_recommendation,
-        ph_recommendation]
-
-
-    return render_template('crop-journey.html', recommendations=recommendations)
-
-
-
-
 
 
 @app.route('/care-plan', methods=['GET', 'POST'])
@@ -437,6 +352,45 @@ def care_plan():
         )
 
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
+
+
+
+@app.route('/chatbot', methods=['GET', 'POST'])
+def chatbot():
+    if 'chat_history' not in session:
+        session['chat_history'] = [
+            {"role": "system", "content": "You are a helpful farming assistant that answers questions about crops, irrigation, and agriculture."}
+        ]
+
+    if request.method == 'POST':
+        user_input = request.form['user_input']
+        session['chat_history'].append({"role": "user", "content": user_input})
+        
+        bot_response = get_chat_response(session['chat_history'])
+        session['chat_history'].append({"role": "assistant", "content": bot_response})
+        session.modified = True  # Mark session as changed
+
+        return render_template('chatbot.html', response=bot_response, chat_history=session['chat_history'])
+
+    return render_template('chatbot.html', response=None, chat_history=session.get('chat_history', []))
+
+
+def get_chat_response(messages):
+    try:
+        chat_completion = client.chat.completions.create(
+            model="mistralai/mistral-7b-instruct:free",
+            messages=messages
+        )
+        return chat_completion.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+
+@app.route('/clear_chat', methods=['POST'])
+def clear_chat():
+    session.pop('chat_history', None)
+    return redirect('/chatbot')
 
 
 if __name__ == '__main__':
