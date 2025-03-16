@@ -23,3 +23,9 @@ Get Crop Recommendations:
 
 Go to the Care Plan section (/care-plan).
 Enter your location, crop type, and planting date to get personalized farming recommendations.
+
+
+Get your queries from an AI Bot
+
+Try the new FarmAdvisor Bot (/chat-bot)
+An AI powered virtual assistant that is similar to ChatGPT, this chatbot allows users to ask detailed questions about crop cultivation, pest management, irrigation systems, and more. 
