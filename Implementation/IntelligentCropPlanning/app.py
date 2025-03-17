@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request, jsonify, session, redirect
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import pandas as pd
 import requests
 from httpx import Client
@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 import openai
 from openai import OpenAI
 from flask_session import Session
+from werkzeug.security import generate_password_hash, check_password_hash
+import boto3
+
 
 app = Flask(__name__)
 
@@ -23,16 +26,22 @@ api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
 
+
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
 )
-'''
-client = OpenAI(
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    base_url="https://openrouter.ai/api/v1"
+
+# DynamoDB connection
+dynamodb = boto3.resource(
+    'dynamodb',
+    region_name=os.getenv('AWS_REGION'),
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
 )
-'''
+
+users_table = dynamodb.Table('users')
+
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
     complete_url = base_url + 'q=' + location + '&appid=' + api_key + '&units=metric'
@@ -354,9 +363,12 @@ def care_plan():
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
 
 
-
+'''
 @app.route('/chatbot', methods=['GET', 'POST'])
 def chatbot():
+    if request.method == 'GET':
+        session['chat_history'] = []
+
     if 'chat_history' not in session:
         session['chat_history'] = [
             {"role": "system", "content": "You are a helpful farming assistant that answers questions about crops, irrigation, and agriculture."}
@@ -385,12 +397,95 @@ def get_chat_response(messages):
     except Exception as e:
         return f"Error: {str(e)}"
 
+'''
+
+
+
+
+
+@app.route('/chatbot', methods=['GET', 'POST'])
+def chatbot():
+    # On GET, clear chat history (i.e., start a new session)
+    if request.method == 'GET':
+        session['chat_history'] = []
+    
+    # If there is no chat history, initialize with a system prompt
+    if 'chat_history' not in session or not session['chat_history']:
+        session['chat_history'] = [
+            {"role": "system", "content": "You are a helpful farming assistant that answers questions about crops, irrigation, and agriculture."}
+        ]
+
+    if request.method == 'POST':
+        user_input = request.form['user_input']
+        session['chat_history'].append({"role": "user", "content": user_input})
+        
+        # Get bot response using the full conversation history
+        bot_response = get_chat_response(session['chat_history'])
+        session['chat_history'].append({"role": "assistant", "content": bot_response})
+        session.modified = True  # Mark session as changed
+        
+        # If the user is logged in, save chat history to DynamoDB
+        if 'user' in session:
+            email = session['user']
+            users_table.update_item(
+                Key={'email': email},
+                UpdateExpression="SET chat_history = :history",
+                ExpressionAttributeValues={":history": session['chat_history']}
+            )
+        
+        return render_template('chatbot.html', response=bot_response, chat_history=session['chat_history'])
+
+    return render_template('chatbot.html', response=None, chat_history=session.get('chat_history', []))
+
+
+def get_chat_response(messages):
+    try:
+        chat_completion = client.chat.completions.create(
+            model="mistralai/mistral-7b-instruct:free",
+            messages=messages
+        )
+        return chat_completion.choices[0].message.content.strip()
+    except Exception as e:
+        return f"<p>Error: {str(e)}</p>"
+
 
 
 @app.route('/clear_chat', methods=['POST'])
 def clear_chat():
     session.pop('chat_history', None)
     return redirect('/chatbot')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = generate_password_hash(request.form['password'])
+
+        users_table.put_item(
+            Item={
+                'email': email,
+                'password': password,
+                'chat_history': []
+            }
+        )
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        response = users_table.get_item(Key={'email': email})
+        user = response.get('Item')
+
+        if user and check_password_hash(user['password'], password):
+            session['user'] = email
+            return redirect(url_for('chatbot'))
+        else:
+            return "Login failed"
+    return render_template('login.html')
 
 
 if __name__ == '__main__':
