@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poiret+One">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css">
 
     <link rel="stylesheet" type="text/css" href="/static/style.css">
 
@@ -28,24 +30,26 @@
             position: relative;
             height: 400px;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .soil-card {
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
 
         }
         .soil-card-header {
             color: white;
             border-radius: 10px 10px 0 0 !important;
             background-color: #52B69A;
+            padding: 10px;
         }
         .temp-header {
             background-color: var(--temp-color);
+            color: white;
         }
         .moisture-header {
             background-color: var(--moisture-color);
+            color: white;
         }
         .current-value {
             font-size: 2.5rem;
@@ -114,9 +118,11 @@
     
     <main role="main" class="container">
       <div class="row justify-content-md-center">
-        <div class="col">
-            {% if weather_data %}
-          <article class="widget">
+        <div class="col-md-6">
+          <!-- Weather Details Widget -->
+          <br/><br/><br/>
+          {% if weather_data %}
+          <div class="widget">
             <div class="weatherIcon"><i class="wi wi-day-cloudy"></i></div>
             <div class="weatherInfo">
               <div class="temperature"><span> {{ weather_data.temperature }}&deg;</span></div>
@@ -125,17 +131,26 @@
                 <div class="place">{{ location }}</div>
               </div>
             </div>
-            <div class="humidity"> {{ weather_data.humidity }}% <br/>Humidity</div>
+            <div class="humidity"> {{ weather_data.humidity }}% Humidity</div>
             {% if ph_value %}
-            <div class="ph">{{ ph_value }}<br/> PH</div>
+            <div class="ph">{{ ph_value }} PH</div>
             {% endif %}
-          </article>
+          </div>
           {% endif %}
+          
+          <!-- Additional Information Card -->
+          <div class="card mt-4" style="border-top: 20px; border-bottom: 20px;">
+            <div class="card-header" style="border-top: 20px; background-color: #52B69A; font-size: 30px;">
+              FarmAdvisor Bot
+            </div>
+            <div class="card-body" style="border-bottom: 20px;">
+              <p  class="card-body">Try the new <b style="color: #00A36C;">FarmAdvisor Bot</b>, an AI chat bot that can answer your farming related queries.</p>
+              <a href="/chatbot" class="btn btn-primary" style="background-color: #99D98C;">Go</a>
+            </div>
+          </div>
         </div>
-
-        <div class="col-6">
-          <br/><br/>
-
+        
+        <div class="col-md-6">
           <!-- Soil Conditions Dashboard -->
           <div class="soil-card mt-4">
             <div class="soil-card-header">
@@ -212,10 +227,11 @@
               </div>
             </div>
           </div>
-          
         </div>
       </div>
     </main>
+
+
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
