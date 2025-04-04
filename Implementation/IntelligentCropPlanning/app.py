@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import pandas as pd
 import requests
 from httpx import Client
@@ -16,7 +16,11 @@ from openai import OpenAI
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
+import uuid
+from botocore.exceptions import ClientError
+import json 
 
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
 app = Flask(__name__)
 
@@ -25,6 +29,9 @@ api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 
 load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
+
+
+BASE_URL = "https://api.open-meteo.com/v1/"
 
 
 client = OpenAI(
@@ -41,6 +48,7 @@ dynamodb = boto3.resource(
 )
 
 users_table = dynamodb.Table('users')
+chat_table = dynamodb.Table('chat_history')
 
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
@@ -189,14 +197,34 @@ def fetch_soil_data_selenium(lon, lat):
     return soil_data
 
 
+def fetch_soil_temperature_history(latitude, longitude, days=30):
+    """Fetch historical soil temperature data"""
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    url = f"{BASE_URL}soil"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": "soil_temperature_0_to_10cm",
+        "start_date": start_date,
+        "end_date": end_date,
+        "timezone": "auto"
+    }
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    return None
 
-#================App Routes=========================================================
 
 
 
 
 @app.route('/weather', methods=['GET', 'POST'])
 def weather():
+
+    #Weather card data
     weather_data = None
     ph_value = None
     if request.method == 'POST':  
@@ -208,15 +236,365 @@ def weather():
         else:
             weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
         
-
         ph_value = get_ph_value(weather_json)
-    return render_template('weather.html', weather_data=weather_data, ph_value=ph_value)
+
+
+    
+    return render_template('weather.html', 
+        weather_data=weather_data, 
+        ph_value=ph_value)
+#================App Routes=========================================================
+
+
+
+
+
+def fetch_soil_data(latitude, longitude, days=30):
+    """Fetch historical soil temperature and moisture data"""
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "hourly": "soil_temperature_0_to_10cm,soil_moisture_0_to_10cm",
+        "start_date": start_date.strftime('%Y-%m-%d'),
+        "end_date": end_date.strftime('%Y-%m-%d'),
+        "timezone": "auto"
+    }
+    
+    # Use the forecast endpoint which includes soil data
+    response = requests.get(f"{BASE_URL}forecast", params=params)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error fetching soil data: {response.status_code} - {response.text}")
+        return None
+
+@app.route('/')
+def index():
+
+    #Weather card data
+    weather_data = None
+    ph_value = None
+    
+    location = 'New Westminster'
+
+    weather_json= get_weather_data(api_key, location)
+    if weather_json.get('cod') == 200:
+        weather_data = parse_weather_data(weather_json)
+    else:
+        weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
+    
+    ph_value = get_ph_value(weather_json)
+
+
+    # Default to Vancouver coordinates
+    lat = request.args.get('lat', '49.2609')
+    lng = request.args.get('lng', '-123.1139')
+    days = request.args.get('days', '30')
+    
+    try:
+        lat = float(lat)
+        lng = float(lng)
+        days = int(days)
+    except:
+        lat, lng, days = 49.2609, -123.1139, 30
+    
+    # Fetch soil data
+    soil_data = fetch_soil_data(lat, lng, days)
+    
+    # Prepare data for charts
+    chart_data = {
+        'temperature': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        },
+        'moisture': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        }
+    }
+    
+    if soil_data and 'hourly' in soil_data:
+        # Process hourly data to create daily averages
+        hourly_data = soil_data['hourly']
+        daily_temp = {}
+        daily_moisture = {}
+        
+        # Check if required data exists in response
+        if ('time' in hourly_data and 
+            'soil_temperature_0_to_10cm' in hourly_data and 
+            'soil_moisture_0_to_10cm' in hourly_data):
+            
+            for i in range(len(hourly_data['time'])):
+                date = hourly_data['time'][i][:10]  # Extract YYYY-MM-DD
+                
+                # Temperature data
+                if date not in daily_temp:
+                    daily_temp[date] = []
+                if i < len(hourly_data['soil_temperature_0_to_10cm']):
+                    daily_temp[date].append(hourly_data['soil_temperature_0_to_10cm'][i])
+                
+                # Moisture data
+                if date not in daily_moisture:
+                    daily_moisture[date] = []
+                if i < len(hourly_data['soil_moisture_0_to_10cm']):
+                    daily_moisture[date].append(hourly_data['soil_moisture_0_to_10cm'][i])
+            
+            # Calculate daily averages
+            for date, temps in sorted(daily_temp.items()):
+                if len(temps) > 0:  # Fixed: using len() instead of .length
+                    avg_temp = sum(temps) / len(temps)
+                    chart_data['temperature']['labels'].append(date)
+                    chart_data['temperature']['daily_avg'].append(round(avg_temp, 1))
+            
+            for date, moistures in sorted(daily_moisture.items()):
+                if len(moistures) > 0:  # Fixed: using len() instead of .length
+                    avg_moisture = sum(moistures) / len(moistures)
+                    chart_data['moisture']['labels'].append(date)
+                    chart_data['moisture']['daily_avg'].append(round(avg_moisture, 3))
+            
+            # Include all hourly points
+            chart_data['temperature']['hourly'] = list(zip(
+                hourly_data['time'],
+                hourly_data['soil_temperature_0_to_10cm']
+            )) if 'soil_temperature_0_to_10cm' in hourly_data else []
+            
+            chart_data['moisture']['hourly'] = list(zip(
+                hourly_data['time'],
+                hourly_data['soil_moisture_0_to_10cm']
+            )) if 'soil_moisture_0_to_10cm' in hourly_data else []
+    
+    return render_template(
+        'index.html',
+        lat=lat,
+        lng=lng,
+        days=days,
+        chart_data=json.dumps(chart_data),
+        last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        weather_data=weather_data,
+        ph_value=ph_value
+    )
+
+
+
+
+'''
+    # Default to Vancouver coordinates
+    lat = request.args.get('lat', '49.2609')
+    lng = request.args.get('lng', '-123.1139')
+    days = request.args.get('days', '30')
+    
+    try:
+        lat = float(lat)
+        lng = float(lng)
+        days = int(days)
+    except (ValueError, TypeError):
+        lat, lng, days = 49.2609, -123.1139, 30
+    
+    # Initialize empty chart data structure
+    chart_data = {
+        'temperature': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        },
+        'moisture': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        }
+    }
+    
+    # Fetch soil data
+    soil_data = fetch_soil_data_history(lat, lng, days)
+    
+    if soil_data and 'hourly' in soil_data:
+        hourly_data = soil_data['hourly']
+        daily_temp = {}
+        daily_moisture = {}
+        
+        # Check if we have the expected keys in the response
+        if ('time' in hourly_data and 
+            'soil_temperature_0_to_10cm' in hourly_data and 
+            'soil_moisture_0_to_10cm' in hourly_data):
+            
+            for i in range(len(hourly_data['time'])):
+                date = hourly_data['time'][i][:10]  # Extract YYYY-MM-DD
+                temp = hourly_data['soil_temperature_0_to_10cm'][i]
+                moisture = hourly_data['soil_moisture_0_to_10cm'][i]
+                
+                # Temperature data
+                if date not in daily_temp:
+                    daily_temp[date] = []
+                daily_temp[date].append(temp)
+                
+                # Moisture data
+                if date not in daily_moisture:
+                    daily_moisture[date] = []
+                daily_moisture[date].append(moisture)
+            
+            # Calculate daily averages and prepare chart data
+            for date, temps in sorted(daily_temp.items()):
+                avg_temp = sum(temps) / len(temps)
+                chart_data['temperature']['labels'].append(date)
+                chart_data['temperature']['daily_avg'].append(round(avg_temp, 1))
+            
+            for date, moistures in sorted(daily_moisture.items()):
+                avg_moisture = sum(moistures) / len(moistures)
+                chart_data['moisture']['labels'].append(date)
+                chart_data['moisture']['daily_avg'].append(round(avg_moisture, 3))
+            
+            # Include all hourly points for detailed view
+            chart_data['temperature']['hourly'] = list(zip(
+                hourly_data['time'],
+                hourly_data['soil_temperature_0_to_10cm']
+            ))
+            chart_data['moisture']['hourly'] = list(zip(
+                hourly_data['time'],
+                hourly_data['soil_moisture_0_to_10cm']
+            ))
+    
+    return render_template(
+        'index.html',
+        weather_data=weather_data,
+        ph_value=ph_value, 
+        location=location,
+        days=days,
+        chart_data=json.dumps(chart_data),
+        last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        has_data=bool(soil_data and 'hourly' in soil_data)  # Pass flag to template
+    )
+
+
 
 
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    
+    weather_data = None
+    ph_value = None
+    location = get_public_ip()
+    print("LOCATION I GOT ", location)
+    weather_json = get_weather_data(api_key, location)
+
+    if weather_json.get('cod') == 200:
+        weather_data = parse_weather_data(weather_json)
+    else:
+        weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
+    ph_value = get_ph_value(weather_json)
+    print(weather_data, location, ph_value)
+
+
+    # Timelines data
+    # Default to Vancouver coordinates
+    lat = request.args.get('lat', '49.2609')
+    lng = request.args.get('lng', '-123.1139')
+    days = request.args.get('days', '30')
+    
+    try:
+        lat = float(lat)
+        lng = float(lng)
+        days = int(days)
+    except:
+        lat, lng, days = 49.2609, -123.1139, 30
+
+    # Prepare data for charts
+    chart_data = {
+        'temperature': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        },
+        'moisture': {
+            'labels': [],
+            'hourly': [],
+            'daily_avg': []
+        }
+    }
+
+    if soil_data and 'hourly' in soil_data:
+        # Process hourly data to create daily averages
+        hourly_data = soil_data['hourly']
+        daily_temp = {}
+        daily_moisture = {}
+        
+        for i in range(len(hourly_data['time'])):
+            date = hourly_data['time'][i][:10]  # Extract YYYY-MM-DD
+            temp = hourly_data['soil_temperature_0_to_10cm'][i]
+            moisture = hourly_data['soil_moisture_0_to_10cm'][i]
+            
+            # Temperature data
+            if date not in daily_temp:
+                daily_temp[date] = []
+            daily_temp[date].append(temp)
+            
+            # Moisture data
+            if date not in daily_moisture:
+                daily_moisture[date] = []
+            daily_moisture[date].append(moisture)
+
+
+        # Calculate daily averages and prepare chart data
+        for date, temps in sorted(daily_temp.items()):
+            avg_temp = sum(temps) / len(temps)
+            chart_data['temperature']['labels'].append(date)
+            chart_data['temperature']['daily_avg'].append(round(avg_temp, 1))
+        
+        for date, moistures in sorted(daily_moisture.items()):
+            avg_moisture = sum(moistures) / len(moistures)
+            chart_data['moisture']['labels'].append(date)
+            chart_data['moisture']['daily_avg'].append(round(avg_moisture, 3))
+        
+        # Include all hourly points for detailed view
+        chart_data['temperature']['hourly'] = list(zip(
+            hourly_data['time'],
+            hourly_data['soil_temperature_0_to_10cm']
+        ))
+        chart_data['moisture']['hourly'] = list(zip(
+            hourly_data['time'],
+            hourly_data['soil_moisture_0_to_10cm']
+        ))
+
+
+    # Fetch soil data
+    soil_data = fetch_soil_data_history(lat, lng, days)
+
+    return render_template('index.html', weather_data=weather_data, 
+        ph_value=ph_value, 
+        location=location,
+        days=days,
+        chart_data=json.dumps(chart_data),
+        last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+'''
+
+def get_public_ip():
+    try:
+        response = requests.get('https://api.ipify.org?format=json')
+        ip = response.json().get('ip')
+        print(ip)
+        return get_location_from_ip(ip)
+    except:
+        return "Could not fetch public IP."
+
+
+
+def get_location_from_ip(ip_address):
+    try:
+        response = requests.get(f'http://ip-api.com/json/{ip_address}').json()
+        
+        if response['status'] == 'success':
+            location =  response.get('city')
+            return location
+    except Exception as e:
+        print(f"Error getting location: {e}")
+        return None
+
 
 
 @app.route('/care-plan', methods=['GET', 'POST'])
@@ -405,11 +783,11 @@ def get_chat_response(messages):
 
 @app.route('/chatbot', methods=['GET', 'POST'])
 def chatbot():
-    # On GET, clear chat history (i.e., start a new session)
+    # On reload (GET), clear chat history (start a new session)
     if request.method == 'GET':
         session['chat_history'] = []
     
-    # If there is no chat history, initialize with a system prompt
+    # If there is no chat history, start new prompt
     if 'chat_history' not in session or not session['chat_history']:
         session['chat_history'] = [
             {"role": "system", "content": "You are a helpful farming assistant that answers questions about crops, irrigation, and agriculture."}
@@ -471,6 +849,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
+'''
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -486,6 +865,107 @@ def login():
         else:
             return "Login failed"
     return render_template('login.html')
+
+'''
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not email or not password:
+            flash('Please enter both email and password.', 'warning')
+            return render_template('login.html')
+
+        try:
+            # Prevent empty email string from being passed
+            response = users_table.get_item(Key={'email': email})
+            user = response.get('Item')
+
+            if user and user.get('password') == password:
+                session['email'] = email  # Store email in session
+                flash('Login successful!', 'success')
+                return redirect(url_for('home'))  # Or your dashboard/homepage
+            else:
+                flash('Invalid email or password.', 'danger')
+
+        except ClientError as e:
+            flash('Server error during login. Please try again.', 'danger')
+            print("DynamoDB ClientError:", e)
+
+    return render_template('login.html')  # GET request or failed login
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out successfully.', 'info')
+    return redirect(url_for('login'))
+
+
+
+def create_user_table():
+    table = dynamodb.create_table(
+        TableName='ChatUsers',
+        KeySchema=[
+            {'AttributeName': 'username', 'KeyType': 'HASH'},  # Partition key
+            {'AttributeName': 'chat_id', 'KeyType': 'RANGE'}   # Sort key
+        ],
+        AttributeDefinitions=[
+            {'AttributeName': 'username', 'AttributeType': 'S'},
+            {'AttributeName': 'chat_id', 'AttributeType': 'S'}
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
+        }
+    )
+
+    print("Creating table...")
+    table.wait_until_exists()
+    print("Table created successfully!")
+
+#create_user_table()
+
+
+def save_chat_to_dynamodb(user_email, user_message, bot_response):
+    chat_table.put_item(
+        Item={
+            'chat_id': str(uuid.uuid4()),
+            'user_email': user_email,
+            'timestamp': datetime.utcnow().isoformat(),
+            'user_message': user_message,
+            'bot_response': bot_response
+        }
+    )
+
+def get_user_chats(user_email):
+    response = chat_table.query(
+        IndexName='user_email-timestamp-index',  # Assumes GSI on user_email + timestamp
+        KeyConditionExpression=boto3.dynamodb.conditions.Key('user_email').eq(user_email),
+        ScanIndexForward=False  # Most recent first
+    )
+    return response.get('Items', [])
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_input = request.form['message']
+    user_email = session.get('email')  # Assuming email stored in session
+
+    # Call your AI model or OpenAI here
+    bot_response = call_model(user_input)
+
+    # Save to DynamoDB
+    save_chat_to_dynamodb(user_email, user_input, bot_response)
+
+    return jsonify({'response': bot_response})
+
+@app.route('/chat-history')
+def chat_history():
+    user_email = session.get('email')
+    history = get_user_chats(user_email)
+    return render_template('chat.html', history=history)
 
 
 if __name__ == '__main__':
