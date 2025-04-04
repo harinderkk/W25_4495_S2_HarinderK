@@ -1,6 +1,8 @@
-@import url(https://fonts.googleapis.com/css?family=Poiret+One);
-@import url(https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css);
+/* Google Fonts - Poiret One */
+@import url('https://fonts.googleapis.com/css?family=Poiret+One');
 
+/* Weather Icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css');
 
 body {
   background: #fafafa;
@@ -8,109 +10,92 @@ body {
   margin-top: 5rem;
 }
 
-
 .widget {
-  position: absolute;
-  top: 24%;
-  left: 50%;
   display: flex;
-  height: 300px;
+  flex-direction: column;
+  height: auto;
   width: 100%;
-  transform: translate(-50%, -50%);
-  flex-wrap: wrap;
-  cursor: pointer;
   border-radius: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  
-  .weatherIcon{
-    flex: 1 100%;
-    height: 60%;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    background: #FAFAFA;
-    font-family: weathericons;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    font-size: 80px;
-    
-    i{
-      padding-top: 30px;
-    }
-  }
-  
-  .weatherInfo{
-    flex: 0 0 60%;
-    height: 40%;
-    background: #52B69A;
-    border-bottom-left-radius: 10px;
-    display: flex;
-    align-items: center;
-    color: white;
-    
-    .temperature{
-      flex: 0 0 40%;
-      width: 100%;
-      font-size: 50px;
-      display: flex;
-      justify-content: space-around;
-    }
-    
-    .description{
-      flex: 0 60%;
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      justify-content: center;
-      
-      .weatherCondition{
-        text-transform: uppercase;
-        font-size: 30px;
-        font-weight: 100;
-      }
-      
-      .place{
-        font-size: 15px;
-      }
-    }
-  }
-  
-  .humidity{
-    flex: 0 0 20%;
-    height: 40%;
-    background: #76C893;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    color: white;
-    font-size: 20px;
-    font-weight: 800;
-  }
-  .ph{
-    flex: 0 0 20%;
-    height: 40%;
-    background: #99D98C;
-    border-bottom-right-radius: 10px;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    color: white;
-    font-size: 20px;
-    font-weight: 800;
-  }
+  margin-bottom: 20px;
 }
 
-p{
-  position: fixed;
-  bottom: 0%;
-  right: 2%;
-  a{
-    text-decoration: none;
-    color: #E4D6A7;
-    font-size: 10px;
-  }
+.weatherIcon {
+  flex: 1 100%;
+  height: 60%;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  background: #FAFAFA;
+  font-family: 'Poiret One', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
 }
+
+.weatherInfo {
+  flex: 0 0 40%;
+  height: 40%;
+  background: #52B69A;
+  /*border-bottom-left-radius: 10px;*/
+  display: flex;
+  align-items: center;
+  color: white;
+  padding: 0 20px;
+}
+
+.temperature {
+  flex: 0 0 40%;
+  font-size: 50px;
+  display: flex;
+  justify-content: center;
+}
+
+.description {
+  flex: 0 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.weatherCondition {
+  text-transform: uppercase;
+  font-size: 30px;
+  font-weight: 300;
+}
+
+.place {
+  font-size: 15px;
+}
+
+.humidity {
+  flex: 0 0 20%;
+  height: 40%;
+  background: #76C893;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.ph {
+  flex: 0 0 20%;
+  height: 40%;
+  background: #99D98C;
+  border-bottom-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+
 
 h1, h2, h3, h4, h5, h6 {
   color: #444444;
@@ -187,4 +172,48 @@ a.article-title:hover {
   font-size: 2.5rem;
 }
 
+.card {
+  border: none;
+}
 
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  transition: all 0.3s ease;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 20px;
+}
+
+.btn-primary:hover {
+  background-color: #218838 !important;
+  border-color: #218838 !important;
+  transform: translateY(-2px);
+}
+
+
+
+
+.chat-box {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    .input-group {
+        width: 100%;
+    }
+    textarea.form-control {
+        min-height: 80px;
+        max-height: auto;
+    }
+    @media (max-width: 576px) {
+        .chat-box {
+            min-height: 200px;
+            max-height: 300px;
+        }
+        textarea.form-control {
+            min-height: 60px;
+        }
+    }
