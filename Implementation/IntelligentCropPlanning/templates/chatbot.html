@@ -1,38 +1,47 @@
 {% extends "layout.html" %}
 {% block content %}
 <article class="media content-section">
-    <h2 class="mb-4">
+    <h2 class="lg-4">
         <img src="/static/images/chatbot_text.png" alt="icon" style="width: 30px; height: 30px; vertical-align: middle;">
         FarmAdvisor Bot
     </h2>
 </article>
-    <div class="chat-box border rounded p-3 mb-3" style="height: auto; overflow-y: hidden; background-color: #f9f9f9;">
+
+<div class="container" style="width: 800px;">
+    <!-- Chat Box -->
+    <div class="border rounded p-3 mb-3 bg-light" style="height: auto; overflow-y: auto;">
         {% for message in chat_history %}
             {% if message.role == 'user' %}
                 <div class="text-right mb-2">
-                    <span class="badge badge-primary">You</span>
-                    <div class="chat-bubble user-msg d-inline-block p-2 rounded bg-primary text-white">
+                    <span class="badge" style="background-color: #44967f; color:white;">You</span>
+                    <div class="d-inline-block p-2 rounded text-white" style="max-width: 70%; background-color: #44967f; word-break: break-word;">
                         {{ message.content }}
                     </div>
                 </div>
             {% elif message.role == 'assistant' %}
                 <div class="text-left mb-2">
-                    <span class="badge badge-success">Bot</span>
-                    <div class="chat-bubble bot-msg d-inline-block p-2 rounded bg-light text-dark border">
+                    <span class="badge" style="background-color: #99D98C; ">Bot</span>
+                    <div class="d-inline-block p-2 rounded border" style="max-width: 70%; word-break: break-word;">
                         {{ message.content }}
                     </div>
-                </div><br/>
+                </div>
             {% endif %}
         {% endfor %}
     </div>
 
-    <form action="/chatbot" method="post" class="form-inline">
-        <textarea name="user_input" class="form-control mr-2 flex-grow-1" rows="4" style="width: 90%;" placeholder="Ask a question about farming..." required></textarea>
-        <button type="submit" class="btn btn-success">Send</button>
+    <!-- Input Form - Fixed Width Version -->
+    <form action="/chatbot" method="post" class="mb-3" style="width: 100%;">
+        <div class="d-flex">
+            <textarea name="user_input" class="form-control mr-2" rows="auto" placeholder="Ask a question about farming..." required 
+                     style="width: calc(100% - 90px); resize: none; overflow-y: auto;">
+            </textarea>
+            <button type="submit" class="btn btn-success" style="width: 80px; background-color: #99D98C;">Send</button>
+        </div>
     </form>
 
-    <form action="/clear_chat" method="post" class="mt-2">
+    <!-- Clear Chat Button -->
+    <form action="/clear_chat" method="post">
         <button type="submit" class="btn btn-outline-danger btn-sm">Clear Chat</button>
     </form>
-
+</div>
 {% endblock content %}
