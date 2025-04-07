@@ -271,11 +271,7 @@
         </div>
       </div>
     </main>
-
-
-
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
@@ -287,14 +283,14 @@
         const chartData = JSON.parse('{{ chart_data|safe }}');
         let tempChart, moistureChart, combinedChart;
         
-        // Initialize the dashboard when DOM is loaded
+        // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
             // Create all charts
             tempChart = createTempChart();
             moistureChart = createMoistureChart();
             combinedChart = createCombinedChart();
             
-            // Update current values and trends
+            
             updateCurrentValues();
             
             // Enable Bootstrap tabs
@@ -516,7 +512,7 @@
             });
         }
         
-        // Common chart options
+       
         function getChartOptions(title, unit, isTemp) {
             const color = isTemp ? '220, 53, 69' : '0, 123, 255';
             const data = isTemp ? chartData.temperature : chartData.moisture;
@@ -624,7 +620,7 @@
                 const currentMoisture = moistureData.hourly[moistureData.hourly.length - 1][1];
                 document.getElementById('currentMoisture').textContent = currentMoisture.toFixed(3);
                 
-                // Calculate moisture trend if we have enough data
+                // Calculate moisture trend 
                 if (moistureData.daily_avg && moistureData.daily_avg.length >= 6) {
                     const recentAvg = moistureData.daily_avg.slice(-3).reduce((a, b) => a + b, 0) / 3;
                     const previousAvg = moistureData.daily_avg.slice(-6, -3).reduce((a, b) => a + b, 0) / 3;
