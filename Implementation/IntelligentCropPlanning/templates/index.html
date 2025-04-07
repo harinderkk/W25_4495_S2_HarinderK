@@ -97,7 +97,7 @@
               <ul class="navbar-nav ml-auto">
                 {% if session.get('email') %}
                   <li class="nav-item">
-                    <a class="nav-link" href="#">Logged in as: {{ session['email'] }}</a>
+                    <a class="nav-link" href="#">{{ session['email'] }}</a>
                   </li>
                   <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
@@ -133,23 +133,64 @@
             </div>
             <div class="humidity"> {{ weather_data.humidity }}% Humidity</div>
             {% if ph_value %}
-            <div class="ph">{{ ph_value }} PH</div>
+            <div class="ph">{{ ph_value }} SOIL PH</div>
             {% endif %}
           </div>
           {% endif %}
           
           <!-- Additional Information Card -->
-          <div class="card mt-4" style="border-top: 20px; border-bottom: 20px;">
-            <div class="card-header" style="border-top: 20px; background-color: #52B69A; font-size: 30px;">
-              FarmAdvisor Bot
-            </div>
-            <div class="card-body" style="border-bottom: 20px;">
-              <p  class="card-body">Try the new <b style="color: #00A36C;">FarmAdvisor Bot</b>, an AI chat bot that can answer your farming related queries.</p>
-              <a href="/chatbot" class="btn btn-primary" style="background-color: #99D98C;">Go</a>
-            </div>
-          </div>
+          
         </div>
-        
+        <div style="
+              max-width: 550px;
+              margin: 2rem auto;
+              background-color: #ffffff;
+              border-radius: 24px;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+              padding: 1.5rem;
+              font-family: 'Segoe UI', sans-serif;
+              text-align: left;
+            ">
+              <div style="color: #34a0a4; font-size: 3rem; font-weight: 800; line-height: 1.2; text-transform: uppercase;">
+                The<br>
+                Farm-Advisor<br>
+                Chatbot
+              </div>
+
+              <p style="margin-top: 1.5rem; font-size: 1.2rem; color: black;">
+                Try the new <strong>FarmAdvisor Bot</strong>, an AI chat bot that can answer your farming related queries.
+              </p>
+
+              <button style="
+                margin-top: 1.5rem;
+                padding: 0.8rem 1.6rem;
+                font-size: 1rem;
+                font-weight: 600;
+                background-color: #76C893;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+              " 
+              onmouseover="this.style.backgroundColor='#168aad'" 
+              onmouseout="this.style.backgroundColor='#34a0a4'">
+                Try It
+              </button>
+            </div>
+
+        <!--
+         <div class="col-sm-6">
+                <div class="card " style="width: 18rem;">
+                    <img class="card-img-top" src="/static/images/crop_rec.jpeg" alt="Card image cap">
+                    <div class="card-body">
+                        <h5 class="card-title">Start Your Crop Journey </h5>
+                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
+                        <a href="/care-plan" class="btn btn-primary">Go</a>
+                    </div>
+                </div>
+            </div>
+        -->
         <div class="col-md-6">
           <!-- Soil Conditions Dashboard -->
           <div class="soil-card mt-4">
