@@ -274,7 +274,7 @@ def index():
     weather_data = None
     ph_value = None
     
-    location = 'New Westminster'
+    location = get_public_ip()
 
     weather_json= get_weather_data(api_key, location)
     if weather_json.get('cod') == 200:
@@ -284,10 +284,9 @@ def index():
     
     ph_value = get_ph_value(weather_json)
 
-
-    # Default to Vancouver coordinates
-    lat = request.args.get('lat', '49.2609')
-    lng = request.args.get('lng', '-123.1139')
+    
+    lng = weather_data.get('lon', 0)
+    lat = weather_data.get('lat',0)
     days = request.args.get('days', '30')
     
     try:
