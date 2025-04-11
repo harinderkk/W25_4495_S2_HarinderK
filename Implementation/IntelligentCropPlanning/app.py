@@ -22,6 +22,8 @@ import json
 from urllib.parse import unquote
 
 
+app = Flask(__name__)
+
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 # DynamoDB connection
 dynamodb = boto3.resource(
@@ -30,16 +32,21 @@ dynamodb = boto3.resource(
     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
 )
+users_table = dynamodb.Table('users')
+chat_table = dynamodb.Table('chat_history')
 
-app = Flask(__name__)
+
 
 #open weather api
 api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 
+
 load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
 
+
 BASE_URL = "https://api.open-meteo.com/v1/"
+
 
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
@@ -47,8 +54,6 @@ client = OpenAI(
 )
 
 
-users_table = dynamodb.Table('users')
-chat_table = dynamodb.Table('chat_history')
 
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
@@ -57,7 +62,7 @@ def get_weather_data(api_key, location):
     return response.json()
 
 
-# Method to get weather data from the 'OpenWeather' API's JSON response ========================
+# Method to get weather data from the 'OpenWeather' API's JSON response 
 def parse_weather_data(data):
     if data['cod'] == 200:  # Check HTTP 'OK' Status Code
         main = data['main']
@@ -87,7 +92,7 @@ def parse_weather_data(data):
 
 
 
-# Method to get longitude and latitue from the 'OpenWeather' API's JSON response ===============   
+# Method to get longitude and latitue from the 'OpenWeather' API's JSON response  
 def get_lon_and_lat(data):
     if data['cod'] == 200:
         coord = data['coord']
@@ -98,7 +103,7 @@ def get_lon_and_lat(data):
         return {'Error': data.get('message', 'Unable to fetch data')}
 
 
-# Get PH value of the soil from the 'openepi' API ===============================================
+# Get PH value of the soil from the 'openepi' API 
 def get_ph_value(weather_data):
     with Client() as client:
         # Get the mean and the 0.05 quantile of the soil properties at the queried location and depths
@@ -114,11 +119,9 @@ def get_ph_value(weather_data):
             },
         )
 
-
         json_multi = response_multi.json()
 
-    
-        #    Get the soil information for the phh2o property
+        #Get the soil information for the phh2o property
         phh2o = json_multi["properties"]["layers"][1]
 
         if (
@@ -128,7 +131,7 @@ def get_ph_value(weather_data):
         ):
             phh2o = json_multi["properties"]["layers"][1]
             
-            # Check if the phh2o layer contains the expected data
+            # Check if the phh2o layer contains the expectsed data
             if (
                 "depths" in phh2o
                 and len(phh2o["depths"]) > 1
@@ -145,7 +148,7 @@ def get_ph_value(weather_data):
         return 5.8
 
 
-# Get soil moisture and temprature ====================================================
+# Get soil moisture and temprature 
 def fetch_soil_data_selenium(lon, lat):
     
     chrome_options = Options()
@@ -214,33 +217,52 @@ def fetch_soil_temperature_history(latitude, longitude, days=30):
 
 
 
+def create_user_table():
+    table = dynamodb.create_table(
+        TableName='ChatUsers',
+        KeySchema=[
+            {'AttributeName': 'username', 'KeyType': 'HASH'},  # Partition key
+            {'AttributeName': 'chat_id', 'KeyType': 'RANGE'}   # Sort key
+        ],
+        AttributeDefinitions=[
+            {'AttributeName': 'username', 'AttributeType': 'S'},
+            {'AttributeName': 'chat_id', 'AttributeType': 'S'}
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
+        }
+    )
+
+    print("Creating table...")
+    table.wait_until_exists()
+    print("Table created successfully!")
+
+#create_user_table()
 
 
-@app.route('/weather', methods=['GET', 'POST'])
-def weather():
 
-    #Weather card data
-    weather_data = None
-    ph_value = None
-    if request.method == 'POST':  
-        location = request.form['location']
+def get_public_ip():
+    try:
+        response = requests.get('https://api.ipify.org?format=json')
+        ip = response.json().get('ip')
+        print(ip)
+        return get_location_from_ip(ip)
+    except:
+        return "Could not fetch public IP."
 
-        weather_json= get_weather_data(api_key, location)
-        if weather_json.get('cod') == 200:
-            weather_data = parse_weather_data(weather_json)
-        else:
-            weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
+
+
+def get_location_from_ip(ip_address):
+    try:
+        response = requests.get(f'http://ip-api.com/json/{ip_address}').json()
         
-        ph_value = get_ph_value(weather_json)
-
-
-    
-    return render_template('weather.html', 
-        weather_data=weather_data, 
-        ph_value=ph_value)
-#================App Routes=========================================================
-
-
+        if response['status'] == 'success':
+            location =  response.get('city')
+            return location
+    except Exception as e:
+        print(f"Error getting location: {e}")
+        return None
 
 
 
@@ -266,6 +288,21 @@ def fetch_soil_data(latitude, longitude, days=30):
     else:
         print(f"Error fetching soil data: {response.status_code} - {response.text}")
         return None
+
+
+def get_chat_response(messages):
+    try:
+        chat_completion = client.chat.completions.create(
+            model="mistralai/mistral-7b-instruct", 
+            messages=messages
+        )
+        return chat_completion.choices[0].message.content.strip()
+    except Exception as e:
+        return f"<p>Error: {str(e)}</p>"
+
+
+#================App Routes=========================================================
+
 
 @app.route('/')
 def index():
@@ -406,9 +443,6 @@ def index():
         crop_recommendations = {"recommendations": []}
 
     
-
-
-
     return render_template(
         'index.html',
         lat=lat,
@@ -440,18 +474,33 @@ def crop_details():
         {{
             "weekly_requirements": [
                 {{
-                    "week": 1,
+                    "week": 7,
                     "water_mm": 20,
                     "temp_min_c": 15,
                     "temp_max_c": 25,
                     "sunshine_hours": 6,
                     "fertilizer_npk": "10-10-10"
+                }},
+                {{
+                    "week": 2,
+                    "water_mm": 25,
+                    "temp_min_c": 16,
+                    "temp_max_c": 26,
+                    "sunshine_hours": 6,
+                    "fertilizer_npk": "10-10-10"
                 }}
+                // Continue for all weeks until harvest
             ]
         }}
+        Important:
+        1. Include ALL weeks until harvest
+        2. Show PROGRESSIVE changes in values
+        3. Return ONLY the JSON with no additional text
+
         Output ONLY the JSON with no additional text or formatting.
         """
 
+        #Generate response 
         response = client.chat.completions.create(
             model="mistralai/mistral-7b-instruct",
             messages=[
@@ -463,20 +512,14 @@ def crop_details():
             ],
             response_format={"type": "json_object"}
         )
+        print(response)
 
         # Enhanced JSON extraction
         raw_response = response.choices[0].message.content
         json_str = re.sub(r'[\x00-\x1F]+', '', raw_response)  # Remove control characters
         json_str = re.search(r'\{.*\}', json_str, re.DOTALL).group()
-        
         data = json.loads(json_str)
         
-        # Validate all fields
-        required_fields = ['week', 'water_mm', 'temp_min_c', 'temp_max_c', 'sunshine_hours']
-        for week_data in data.get('weekly_requirements', []):
-            for field in required_fields:
-                if field not in week_data:
-                    raise ValueError(f"Missing required field: {field}")
 
         return jsonify(data)
 
@@ -489,28 +532,29 @@ def crop_details():
 
 
 
+@app.route('/weather', methods=['GET', 'POST'])
+def weather():
 
-def get_public_ip():
-    try:
-        response = requests.get('https://api.ipify.org?format=json')
-        ip = response.json().get('ip')
-        print(ip)
-        return get_location_from_ip(ip)
-    except:
-        return "Could not fetch public IP."
+    #Weather card data
+    weather_data = None
+    ph_value = None
+    if request.method == 'POST':  
+        location = request.form['location']
 
-
-
-def get_location_from_ip(ip_address):
-    try:
-        response = requests.get(f'http://ip-api.com/json/{ip_address}').json()
+        weather_json= get_weather_data(api_key, location)
+        if weather_json.get('cod') == 200:
+            weather_data = parse_weather_data(weather_json)
+        else:
+            weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
         
-        if response['status'] == 'success':
-            location =  response.get('city')
-            return location
-    except Exception as e:
-        print(f"Error getting location: {e}")
-        return None
+        ph_value = get_ph_value(weather_json)
+
+
+    
+    return render_template('weather.html', 
+        weather_data=weather_data, 
+        ph_value=ph_value)
+
 
 
 
@@ -660,9 +704,6 @@ def care_plan():
 
 
 
-
-
-
 @app.route('/chatbot', methods=['GET', 'POST'])
 def chatbot():
     # On reload (GET), clear chat history (start a new session)
@@ -698,16 +739,6 @@ def chatbot():
     return render_template('chatbot.html', response=None, chat_history=session.get('chat_history', []))
 
 
-def get_chat_response(messages):
-    try:
-        chat_completion = client.chat.completions.create(
-            model="mistralai/mistral-7b-instruct", 
-            messages=messages
-        )
-        return chat_completion.choices[0].message.content.strip()
-    except Exception as e:
-        return f"<p>Error: {str(e)}</p>"
-
 
 
 @app.route('/clear_chat', methods=['POST'])
@@ -731,24 +762,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-'''
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
 
-        response = users_table.get_item(Key={'email': email})
-        user = response.get('Item')
-
-        if user and check_password_hash(user['password'], password):
-            session['user'] = email
-            return redirect(url_for('chatbot'))
-        else:
-            return "Login failed"
-    return render_template('login.html')
-
-'''
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -787,29 +801,6 @@ def logout():
 
 
 
-def create_user_table():
-    table = dynamodb.create_table(
-        TableName='ChatUsers',
-        KeySchema=[
-            {'AttributeName': 'username', 'KeyType': 'HASH'},  # Partition key
-            {'AttributeName': 'chat_id', 'KeyType': 'RANGE'}   # Sort key
-        ],
-        AttributeDefinitions=[
-            {'AttributeName': 'username', 'AttributeType': 'S'},
-            {'AttributeName': 'chat_id', 'AttributeType': 'S'}
-        ],
-        ProvisionedThroughput={
-            'ReadCapacityUnits': 5,
-            'WriteCapacityUnits': 5
-        }
-    )
-
-    print("Creating table...")
-    table.wait_until_exists()
-    print("Table created successfully!")
-
-#create_user_table()
-
 
 def save_chat_to_dynamodb(user_email, user_message, bot_response):
     chat_table.put_item(
@@ -830,12 +821,13 @@ def get_user_chats(user_email):
     )
     return response.get('Items', [])
 
+
+
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.form['message']
     user_email = session.get('email')  # Assuming email stored in session
 
-    # Call your AI model or OpenAI here
     bot_response = call_model(user_input)
 
     # Save to DynamoDB
