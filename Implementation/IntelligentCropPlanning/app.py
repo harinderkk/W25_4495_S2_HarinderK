@@ -20,7 +20,16 @@ import uuid
 from botocore.exceptions import ClientError
 import json 
 
+
+
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+# DynamoDB connection
+dynamodb = boto3.resource(
+    'dynamodb',
+    region_name=os.getenv('AWS_REGION'),
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+)
 
 app = Flask(__name__)
 
@@ -30,22 +39,13 @@ api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
 
-
 BASE_URL = "https://api.open-meteo.com/v1/"
-
 
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
 )
 
-# DynamoDB connection
-dynamodb = boto3.resource(
-    'dynamodb',
-    region_name=os.getenv('AWS_REGION'),
-    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
-)
 
 users_table = dynamodb.Table('users')
 chat_table = dynamodb.Table('chat_history')
@@ -55,8 +55,6 @@ def get_weather_data(api_key, location):
     complete_url = base_url + 'q=' + location + '&appid=' + api_key + '&units=metric'
     response = requests.get(complete_url)
     return response.json()
-
-
 
 
 # Method to get weather data from the 'OpenWeather' API's JSON response ========================
@@ -98,9 +96,6 @@ def get_lon_and_lat(data):
         return lon, lat
     else:
         return {'Error': data.get('message', 'Unable to fetch data')}
-    
-    
-
 
 
 # Get PH value of the soil from the 'openepi' API ===============================================
@@ -369,6 +364,51 @@ def index():
                 hourly_data['soil_moisture_0_to_10cm']
             )) if 'soil_moisture_0_to_10cm' in hourly_data else []
     
+        
+
+        # In the index route, modify the crop recommendation prompt and processing:
+    crop_prompt = f"""
+    Given the following environmental conditions in {location}:
+    - Current temperature: {weather_data['temperature']}°C
+    - Soil pH: {ph_value}
+    - Average soil temperature: {chart_data['temperature']['daily_avg'][-1] if chart_data['temperature']['daily_avg'] else 'unknown'}°C
+    - Average soil moisture: {chart_data['moisture']['daily_avg'][-1] if chart_data['moisture']['daily_avg'] else 'unknown'}m³/m³
+
+    Provide exactly 3 crop recommendations in JSON format with this structure:
+    {{
+      "recommendations": [
+        {{
+          "name": "Crop Name",
+          "reason": "Brief reason",
+          "planting_window": "Month range",
+          "soil_temp_range": "X-Y°C",
+          "ph_range": "A-B",
+          "water_needs": "Low/Medium/High"
+        }}
+      ]
+    }}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="mistralai/mistral-7b-instruct",
+            messages=[
+                {"role": "system", "content": "You are an agricultural expert. Provide exactly 3 crop recommendations in valid JSON format."},
+                {"role": "user", "content": crop_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        if response.choices[0].message.content:
+            crop_recommendations = json.loads(response.choices[0].message.content)
+        else:
+            crop_recommendations = {"recommendations": []}
+        print(response)
+    except Exception as e:
+        crop_recommendations = {"recommendations": []}
+
+    
+    
+
     return render_template(
         'index.html',
         lat=lat,
@@ -377,201 +417,14 @@ def index():
         chart_data=json.dumps(chart_data),
         last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         weather_data=weather_data,
-        ph_value=ph_value
+        ph_value=ph_value,
+        crop_recommendations=crop_recommendations,
+        location=location
     )
 
 
 
 
-'''
-    # Default to Vancouver coordinates
-    lat = request.args.get('lat', '49.2609')
-    lng = request.args.get('lng', '-123.1139')
-    days = request.args.get('days', '30')
-    
-    try:
-        lat = float(lat)
-        lng = float(lng)
-        days = int(days)
-    except (ValueError, TypeError):
-        lat, lng, days = 49.2609, -123.1139, 30
-    
-    # Initialize empty chart data structure
-    chart_data = {
-        'temperature': {
-            'labels': [],
-            'hourly': [],
-            'daily_avg': []
-        },
-        'moisture': {
-            'labels': [],
-            'hourly': [],
-            'daily_avg': []
-        }
-    }
-    
-    # Fetch soil data
-    soil_data = fetch_soil_data_history(lat, lng, days)
-    
-    if soil_data and 'hourly' in soil_data:
-        hourly_data = soil_data['hourly']
-        daily_temp = {}
-        daily_moisture = {}
-        
-        # Check if we have the expected keys in the response
-        if ('time' in hourly_data and 
-            'soil_temperature_0_to_10cm' in hourly_data and 
-            'soil_moisture_0_to_10cm' in hourly_data):
-            
-            for i in range(len(hourly_data['time'])):
-                date = hourly_data['time'][i][:10]  # Extract YYYY-MM-DD
-                temp = hourly_data['soil_temperature_0_to_10cm'][i]
-                moisture = hourly_data['soil_moisture_0_to_10cm'][i]
-                
-                # Temperature data
-                if date not in daily_temp:
-                    daily_temp[date] = []
-                daily_temp[date].append(temp)
-                
-                # Moisture data
-                if date not in daily_moisture:
-                    daily_moisture[date] = []
-                daily_moisture[date].append(moisture)
-            
-            # Calculate daily averages and prepare chart data
-            for date, temps in sorted(daily_temp.items()):
-                avg_temp = sum(temps) / len(temps)
-                chart_data['temperature']['labels'].append(date)
-                chart_data['temperature']['daily_avg'].append(round(avg_temp, 1))
-            
-            for date, moistures in sorted(daily_moisture.items()):
-                avg_moisture = sum(moistures) / len(moistures)
-                chart_data['moisture']['labels'].append(date)
-                chart_data['moisture']['daily_avg'].append(round(avg_moisture, 3))
-            
-            # Include all hourly points for detailed view
-            chart_data['temperature']['hourly'] = list(zip(
-                hourly_data['time'],
-                hourly_data['soil_temperature_0_to_10cm']
-            ))
-            chart_data['moisture']['hourly'] = list(zip(
-                hourly_data['time'],
-                hourly_data['soil_moisture_0_to_10cm']
-            ))
-    
-    return render_template(
-        'index.html',
-        weather_data=weather_data,
-        ph_value=ph_value, 
-        location=location,
-        days=days,
-        chart_data=json.dumps(chart_data),
-        last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        has_data=bool(soil_data and 'hourly' in soil_data)  # Pass flag to template
-    )
-
-
-
-
-
-@app.route('/')
-def home():
-    
-    weather_data = None
-    ph_value = None
-    location = get_public_ip()
-    print("LOCATION I GOT ", location)
-    weather_json = get_weather_data(api_key, location)
-
-    if weather_json.get('cod') == 200:
-        weather_data = parse_weather_data(weather_json)
-    else:
-        weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
-    ph_value = get_ph_value(weather_json)
-    print(weather_data, location, ph_value)
-
-
-    # Timelines data
-    # Default to Vancouver coordinates
-    lat = request.args.get('lat', '49.2609')
-    lng = request.args.get('lng', '-123.1139')
-    days = request.args.get('days', '30')
-    
-    try:
-        lat = float(lat)
-        lng = float(lng)
-        days = int(days)
-    except:
-        lat, lng, days = 49.2609, -123.1139, 30
-
-    # Prepare data for charts
-    chart_data = {
-        'temperature': {
-            'labels': [],
-            'hourly': [],
-            'daily_avg': []
-        },
-        'moisture': {
-            'labels': [],
-            'hourly': [],
-            'daily_avg': []
-        }
-    }
-
-    if soil_data and 'hourly' in soil_data:
-        # Process hourly data to create daily averages
-        hourly_data = soil_data['hourly']
-        daily_temp = {}
-        daily_moisture = {}
-        
-        for i in range(len(hourly_data['time'])):
-            date = hourly_data['time'][i][:10]  # Extract YYYY-MM-DD
-            temp = hourly_data['soil_temperature_0_to_10cm'][i]
-            moisture = hourly_data['soil_moisture_0_to_10cm'][i]
-            
-            # Temperature data
-            if date not in daily_temp:
-                daily_temp[date] = []
-            daily_temp[date].append(temp)
-            
-            # Moisture data
-            if date not in daily_moisture:
-                daily_moisture[date] = []
-            daily_moisture[date].append(moisture)
-
-
-        # Calculate daily averages and prepare chart data
-        for date, temps in sorted(daily_temp.items()):
-            avg_temp = sum(temps) / len(temps)
-            chart_data['temperature']['labels'].append(date)
-            chart_data['temperature']['daily_avg'].append(round(avg_temp, 1))
-        
-        for date, moistures in sorted(daily_moisture.items()):
-            avg_moisture = sum(moistures) / len(moistures)
-            chart_data['moisture']['labels'].append(date)
-            chart_data['moisture']['daily_avg'].append(round(avg_moisture, 3))
-        
-        # Include all hourly points for detailed view
-        chart_data['temperature']['hourly'] = list(zip(
-            hourly_data['time'],
-            hourly_data['soil_temperature_0_to_10cm']
-        ))
-        chart_data['moisture']['hourly'] = list(zip(
-            hourly_data['time'],
-            hourly_data['soil_moisture_0_to_10cm']
-        ))
-
-
-    # Fetch soil data
-    soil_data = fetch_soil_data_history(lat, lng, days)
-
-    return render_template('index.html', weather_data=weather_data, 
-        ph_value=ph_value, 
-        location=location,
-        days=days,
-        chart_data=json.dumps(chart_data),
-        last_update=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-'''
 
 def get_public_ip():
     try:
@@ -741,41 +594,6 @@ def care_plan():
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
 
 
-'''
-@app.route('/chatbot', methods=['GET', 'POST'])
-def chatbot():
-    if request.method == 'GET':
-        session['chat_history'] = []
-
-    if 'chat_history' not in session:
-        session['chat_history'] = [
-            {"role": "system", "content": "You are a helpful farming assistant that answers questions about crops, irrigation, and agriculture."}
-        ]
-
-    if request.method == 'POST':
-        user_input = request.form['user_input']
-        session['chat_history'].append({"role": "user", "content": user_input})
-        
-        bot_response = get_chat_response(session['chat_history'])
-        session['chat_history'].append({"role": "assistant", "content": bot_response})
-        session.modified = True  # Mark session as changed
-
-        return render_template('chatbot.html', response=bot_response, chat_history=session['chat_history'])
-
-    return render_template('chatbot.html', response=None, chat_history=session.get('chat_history', []))
-
-
-def get_chat_response(messages):
-    try:
-        chat_completion = client.chat.completions.create(
-            model="mistralai/mistral-7b-instruct:free",
-            messages=messages
-        )
-        return chat_completion.choices[0].message.content.strip()
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-'''
 
 
 
@@ -819,7 +637,7 @@ def chatbot():
 def get_chat_response(messages):
     try:
         chat_completion = client.chat.completions.create(
-            model="mistralai/mistral-7b-instruct:free",
+            model="mistralai/mistral-7b-instruct", 
             messages=messages
         )
         return chat_completion.choices[0].message.content.strip()
