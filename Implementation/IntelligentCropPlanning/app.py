@@ -19,7 +19,7 @@ import boto3
 import uuid
 from botocore.exceptions import ClientError
 import json 
-
+from urllib.parse import unquote
 
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
@@ -407,7 +407,8 @@ def index():
         crop_recommendations = {"recommendations": []}
 
     
-    
+
+
 
     return render_template(
         'index.html',
@@ -422,6 +423,70 @@ def index():
         location=location
     )
 
+@app.route('/crop-details')
+def crop_details():
+    try:
+        # Properly decode URL parameters
+        crop_name = unquote(request.args.get('crop', ''))
+        location = unquote(request.args.get('location', ''))
+        
+        # Add validation for special characters
+        if not re.match(r'^[\w\s\-()]+$', crop_name):
+            return jsonify({"error": "Invalid crop name format"}), 400
+
+        # Update the prompt to handle botanical names
+        detailed_prompt = f"""
+        Provide weekly growth parameters for {crop_name} in {location}.
+        Use this EXACT JSON structure:
+        {{
+            "weekly_requirements": [
+                {{
+                    "week": 1,
+                    "water_mm": 20,
+                    "temp_min_c": 15,
+                    "temp_max_c": 25,
+                    "sunshine_hours": 6,
+                    "fertilizer_npk": "10-10-10"
+                }}
+            ]
+        }}
+        Output ONLY the JSON with no additional text or formatting.
+        """
+
+        response = client.chat.completions.create(
+            model="mistralai/mistral-7b-instruct",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "You are an agricultural data system. Respond ONLY with valid JSON. No explanations."
+                },
+                {"role": "user", "content": detailed_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+
+        # Enhanced JSON extraction
+        raw_response = response.choices[0].message.content
+        json_str = re.sub(r'[\x00-\x1F]+', '', raw_response)  # Remove control characters
+        json_str = re.search(r'\{.*\}', json_str, re.DOTALL).group()
+        
+        data = json.loads(json_str)
+        
+        # Validate all fields
+        required_fields = ['week', 'water_mm', 'temp_min_c', 'temp_max_c', 'sunshine_hours']
+        for week_data in data.get('weekly_requirements', []):
+            for field in required_fields:
+                if field not in week_data:
+                    raise ValueError(f"Missing required field: {field}")
+
+        return jsonify(data)
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to process crop data",
+            "details": str(e),
+            "received_data": raw_response
+        }), 500
 
 
 
