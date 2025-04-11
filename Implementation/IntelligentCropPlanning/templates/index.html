@@ -179,18 +179,7 @@
               </button>
             </div>
 
-        <!--
-         <div class="col-sm-6">
-                <div class="card " style="width: 18rem;">
-                    <img class="card-img-top" src="/static/images/crop_rec.jpeg" alt="Card image cap">
-                    <div class="card-body">
-                        <h5 class="card-title">Start Your Crop Journey </h5>
-                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
-                        <a href="/care-plan" class="btn btn-primary">Go</a>
-                    </div>
-                </div>
-            </div>
-        -->
+        
         <div class="col-md-6">
           <!-- Soil Conditions Dashboard -->
           <div class="soil-card mt-4">
@@ -269,6 +258,57 @@
             </div>
           </div>
         </div>
+
+    
+<div class="container mt-4">
+    <h4 class="mb-3">Best crops to grow in {{ location }}</h4>
+    <div class="row" id="cropRecommendations">
+        {% for crop in crop_recommendations.recommendations %}
+        <div class="col-md-4 mb-4">
+            <div class="card crop-card" onclick="showCropDetails('{{ crop.name }}')" style="cursor: pointer;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ crop.name }}</h5>
+                    <p class="card-text">{{ crop.reason }}</p>
+                    <div class="badge badge-primary">{{ crop.water_needs }} Water</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+<div class="modal fade" id="cropModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cropModalLabel"></h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="cropChartContainer" class="chart-container"></div>
+                        <h6>Water Needs Weekly Plan</h6>
+                        <div id="waterTimeline"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">Requirements</div>
+                            <ul class="list-group list-group-flush" id="requirementsList">
+                                <!-- Dynamic content -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
       </div>
     </main>
     
@@ -279,6 +319,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <script>
+
+
+
         // Parse the chart data from Flask
         const chartData = JSON.parse('{{ chart_data|safe }}');
         let tempChart, moistureChart, combinedChart;
@@ -645,6 +688,61 @@
                 }
             }
         }
+
+
+        /* new javascript for cards */
+        // Add to the existing script
+function showCropDetails(cropName) {
+    fetch(`/crop-details?crop=${encodeURIComponent(cropName)}&location={{ location }}`)
+        .then(response => response.json())
+        .then(data => {
+            $('#cropModalLabel').text(cropName);
+            $('#requirementsList').html(`
+                <li class="list-group-item">Planting Period: ${data.planting_window}</li>
+                <li class="list-group-item">Soil Temperature: ${data.soil_temp_range}</li>
+                <li class="list-group-item">pH Range: ${data.ph_range}</li>
+                <li class="list-group-item">Harvest Date: ${data.harvest_date}</li>
+            `);
+
+            renderCropChart(data);
+            renderWaterTimeline(data.water_schedule);
+            $('#cropModal').modal('show');
+        });
+}
+
+function renderCropChart(data) {
+    const ctx = document.createElement('canvas');
+    $('#cropChartContainer').html(ctx);
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.temperature_data.labels,
+            datasets: [{
+                label: 'Temperature Trend',
+                data: data.temperature_data.values,
+                borderColor: '#52B69A'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { title: { text: 'Temperature (°C)' } }
+            }
+        }
+    });
+}
+
+function renderWaterTimeline(schedule) {
+    const timeline = schedule.map(week => `
+        <div class="progress mb-2" style="height: 20px;">
+            <div class="progress-bar" role="progressbar" 
+                 style="width: ${week.value}%; background-color: #34A0A4">
+                Week ${week.week}: ${week.value}mm
+            </div>
+        </div>
+    `).join('');
+    $('#waterTimeline').html(timeline);
+}
     </script>
 </body>
 </html>
