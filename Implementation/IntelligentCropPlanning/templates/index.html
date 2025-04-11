@@ -693,56 +693,156 @@
         /* new javascript for cards */
         // Add to the existing script
 function showCropDetails(cropName) {
-    fetch(`/crop-details?crop=${encodeURIComponent(cropName)}&location={{ location }}`)
+    const location = "{{ location }}";
+    
+    // Show loading spinner
+    $('#cropModal .modal-body').html(`
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading details for ${cropName}...</p>
+        </div>
+    `);
+    $('#cropModal').modal('show');
+
+    fetch(`/crop-details?crop=${encodeURIComponent(cropName)}&location=${encodeURIComponent(location)}`)
         .then(response => response.json())
         .then(data => {
+            if(data.error) throw new Error(data.error);
+            
             $('#cropModalLabel').text(cropName);
-            $('#requirementsList').html(`
-                <li class="list-group-item">Planting Period: ${data.planting_window}</li>
-                <li class="list-group-item">Soil Temperature: ${data.soil_temp_range}</li>
-                <li class="list-group-item">pH Range: ${data.ph_range}</li>
-                <li class="list-group-item">Harvest Date: ${data.harvest_date}</li>
+            renderCharts(data);
+        })
+        .catch(error => {
+            $('#cropModal .modal-body').html(`
+                <div class="alert alert-danger">
+                    Failed to load details: ${error.message}
+                </div>
             `);
-
-            renderCropChart(data);
-            renderWaterTimeline(data.water_schedule);
-            $('#cropModal').modal('show');
         });
 }
 
-function renderCropChart(data) {
-    const ctx = document.createElement('canvas');
-    $('#cropChartContainer').html(ctx);
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.temperature_data.labels,
-            datasets: [{
-                label: 'Temperature Trend',
-                data: data.temperature_data.values,
-                borderColor: '#52B69A'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { title: { text: 'Temperature (°C)' } }
-            }
+
+
+
+function renderCharts(data) {
+    try {
+        // Clear previous charts
+        $('#waterChart, #tempChart, #sunshineChart').remove();
+        $('#cropModal .modal-body').html(`
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="chart-container">
+                        <canvas id="waterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <canvas id="tempChart"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="sunshineChart"></canvas>
+                </div>
+            </div>
+        `);
+
+        // Validate data structure
+        if (!data?.weekly_requirements?.length) {
+            throw new Error('No weekly data available');
         }
-    });
+
+        const weeks = data.weekly_requirements.map(w => `Week ${w.week}`);
+        
+        // Water Chart with error boundaries
+        new Chart(document.getElementById('waterChart'), {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [{
+                    label: 'Water (mm/week)',
+                    data: data.weekly_requirements.map(w => Number(w.water_mm) || 0),
+                    borderColor: '#34A0A4',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Weekly Water Requirements'
+                    }
+                }
+            }
+        });
+
+        // Temperature Chart
+        new Chart(document.getElementById('tempChart'), {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [
+                    {
+                        label: 'Min Temp (°C)',
+                        data: data.weekly_requirements.map(w => Number(w.temp_min_c) || 0),
+                        borderColor: '#FF6B6B',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Max Temp (°C)',
+                        data: data.weekly_requirements.map(w => Number(w.temp_max_c) || 0),
+                        borderColor: '#FF9B54',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Temperature Ranges'
+                    }
+                }
+            }
+        });
+
+        // Sunshine Chart
+        new Chart(document.getElementById('sunshineChart'), {
+            type: 'bar',
+            data: {
+                labels: weeks,
+                datasets: [{
+                    label: 'Sunshine (hours/day)',
+                    data: data.weekly_requirements.map(w => Number(w.sunshine_hours) || 0),
+                    backgroundColor: '#FFD93D'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Daily Sunshine Requirements'
+                    }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error('Chart rendering error:', e);
+        $('#cropModal .modal-body').html(`
+            <div class="alert alert-danger">
+                Error displaying charts: ${e.message}
+                <div class="mt-2 raw-data">${JSON.stringify(data, null, 2)}</div>
+            </div>
+        `);
+    }
 }
 
-function renderWaterTimeline(schedule) {
-    const timeline = schedule.map(week => `
-        <div class="progress mb-2" style="height: 20px;">
-            <div class="progress-bar" role="progressbar" 
-                 style="width: ${week.value}%; background-color: #34A0A4">
-                Week ${week.week}: ${week.value}mm
-            </div>
-        </div>
-    `).join('');
-    $('#waterTimeline').html(timeline);
-}
+
     </script>
 </body>
 </html>
