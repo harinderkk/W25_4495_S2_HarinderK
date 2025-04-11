@@ -219,3 +219,19 @@ a.article-title:hover {
             min-height: 60px;
         }
     }
+
+
+
+.crop-card {
+    transition: transform 0.2s;
+    border: 2px solid #34A0A4;
+}
+.crop-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(52, 160, 164, 0.3);
+}
+.progress-bar {
+    font-size: 0.8rem;
+    padding-left: 8px;
+    text-align: left;
+}
