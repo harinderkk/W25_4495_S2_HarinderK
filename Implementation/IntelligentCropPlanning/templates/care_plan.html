@@ -14,325 +14,368 @@
 
     <link rel="stylesheet" type="text/css" href="/static/style.css">
 
-    {% if title %}
-        <title>Intelligent Crop - {{ title }}</title>
-    {% else %}
         <title>Intelligent Crop</title>
-    {% endif %}
     
-    <style>
-        .metric-box {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            height: 100%;
-        }
-        .card {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-radius: 10px;
-        }
-        .card-header {
-            border-radius: 10px 10px 0 0 !important;
-        }
-    </style>
+    
+
 </head>
 <body>
     <header class="site-header">
       <nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top">
-        <div class="container">
-          <a class="navbar-brand mr-4" href="/">Intelligent Crop Planning</a>
-          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle" aria-controls="navbarToggle" aria-expanded="false" aria-label="Toggle navigation">
+    <div class="container">
+        <a class="navbar-brand mr-4" href="/">Intelligent Crop Planning</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle">
             <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarToggle">
+        </button>
+        <div class="collapse navbar-collapse" id="navbarToggle">
             <div class="navbar-nav mr-auto">
-              <a class="nav-item nav-link" href="/">Home</a>
-              <a class="nav-item nav-link" href="/about">About</a>
+                <a class="nav-item nav-link" href="/">Home</a>
+                <a class="nav-item nav-link" href="/about">About</a>
             </div>
-            <!-- Navbar Right Side -->
-            <div class="navbar-nav">
-              <!--<a class="nav-item nav-link" href="/login">Login</a> -->
-              <ul class="navbar-nav ml-auto">
-                {% if session.get('email') %}
-                  <li class="nav-item">
-                    <a class="nav-link" href="#">{{ session['email'] }}</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                  </li>
-                {% else %}
-                  <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                  </li>
-                {% endif %}
-              </ul>
 
-              <a class="nav-item nav-link" href="/register">Register</a>
+            <div class="navbar-nav">
+                {% if session.get('email') %}
+                    <span class="nav-item nav-link text-light mr-2">
+                        {{ session['email'] }}
+                    </span>
+                    <a class="nav-item nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                {% else %}
+                    <a class="nav-item nav-link" href="{{ url_for('login') }}">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a class="nav-item nav-link" href="{{ url_for('register') }}">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                {% endif %}
             </div>
-          </div>
         </div>
-      </nav>
+    </div>
+</nav>
     </header>
     
     <main role="main" class="container">
-    <article class="media content-section">
-    <div class="alert alert-success" role="alert">
-        <center>
-            <h4 class="alert-heading">Start your Farming Journey</h4>
-            <hr>
-            <p class="mb-0">Plan your next step by getting personalized crop growth schedules, water and temperature requirements, and harvest dates.</p>
-        </center>
-    </div>
-</article>
+      
+        <article class="media content-section">
+        <div class="alert alert-success" role="alert">
+            <center>
+                <h4 class="alert-heading">Start your Farming Journey</h4>
+                <hr>
+                <p class="mb-0">Plan your next step by getting personalized crop growth schedules, water and temperature requirements, and harvest dates.</p>
+            </center>
+        </div>
+        </article>
 
-<article class="media content-section">
-    <form action="/care-plan" method="POST">
-        <div class="form-group">
-            <label for="location">Enter Your Location:</label>
-            <input type="text" class="form-control" id="location" name="location" placeholder="e.g., New York" required><br/>
-
-            <label for="crop">Select the crop you have grown:  </label>
-            <select class="form-control" aria-label="Default select example" id="crop" name="crop" required>
-                <option selected>Open this select menu</option>
-                <option value="rice">Rice</option>
-                <option value="wheat">Wheat</option>
-                <option value="maize">Maize</option>
-                <option value="apple">Apple</option>
-                <option value="banana">Banana</option>
-                <option value="blackgram">Blackgram</option>
-                <option value="chickpea">Chickpea</option>
-                <option value="coconut">Coconut</option>
-                <option value="coffee">Coffee</option>
-                <option value="cotton">Cotton</option>
-                <option value="grapes">Grapes</option>
-                <option value="jute">Jute</option>
-                <option value="kidneybeans">Kidney Beans</option>
-                <option value="lentil">Lentil</option>
-                <option value="mango">Mango</option>
-                <option value="mothbeans">Moth Beans</option>
-                <option value="mungbean">Mung Bean</option>
-                <option value="muskmelon">Muskmelon</option>
-                <option value="orange">Orange</option>
-                <option value="papaya">Papaya</option>
-                <option value="pigeonpeas">Pigeon Peas</option>
-                <option value="pomegranate">Pomegranate</option>
-                <option value="watermelon">Watermelon</option>
+        <form id="cropPlanForm">
+            <div class="form-group">
+                <label for="location">Enter the Location:</label>
+                <input type="text" class="form-control" id="location" name="location" required>
                 
-            </select><br/>
+                <label for="crop">Enter the crop name:</label>
+                <input type="text" class="form-control" id="crop" name="crop" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Plan</button>
+        </form>
 
-            <label for="planting_date">Select the date you wish to plant your crop OR the date it was planted:</label>
-            <input type="date" class="form-control" id="planting_date" name="planting_date" required 
-                pattern="\d{4}-\d{2}-\d{2}" value="{{ today }}"><br/>
+        <!-- Results Container -->
+        <div id="planResults" class="mt-4">
+            <!-- Content  -->
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
-</article>
-
-{% if future_planting_message %}
-<article class="media content-section">
-    <div class="alert alert-warning">
-        <h4>Planting Date Recommendation</h4>
-        <p>{{ future_planting_message }}</p>
-    </div>
-</article>
-{% endif %}
-
-{% if harvest_message %}
-<article class="media content-section">
-    <div class="harvest-alert">
-        <h2>{{ harvest_message }}</h2>
-    </div>
-</article>
-{% endif %}
-
-{% if recommendations %}
-<article class="media content-section">
-    <div class="soil-info">
-        <h2>{{ recommendations.crop }} Growth Plan for {{ location }}</h2>
-        
-        <!-- Progress Bar -->
-        <div class="progress-container card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Growth Progress</h5>
-                <p>You are currently at Week {{ recommendations.current_week }} of the growth period.</p>
-                <div class="progress" style="height: 30px;">
-                    <div class="progress-bar bg-info" style="width: {{ (recommendations.current_week/recommendations.total_weeks)*100 }}%">
-                        Week {{ recommendations.current_week }} 
-                    </div>
-                </div>
+        <div class="modal fade" id="cropModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cropModalLabel"></h5>
+                 <div>
+                  <button id="downloadPdf" class="btn btn-sm btn-success mr-2">
+                      <i class="fas fa-file-pdf"></i> Save Plan
+                  </button>
+                  <button type="button" class="close" data-dismiss="modal">
+                      <span>&times;</span>
+                  </button>
+                  </div>
             </div>
-        </div>
-
-        <!-- Current Week Priorities Card -->
-        <div class="card-deck mb-4">
-            <div class="card bg-light">
-                <div class="card-header">
-                    <h5 class="card-title">This Week's Priorities</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="metric-box text-center p-3">
-                                <h6><i class="fas fa-tint"></i> Water</h6>
-                                <p class="display-4">{{ recommendations.weekly_plan[0].water }}<small class="text-muted">mm</small></p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="metric-box text-center p-3">
-                                <h6><i class="fas fa-temperature-high"></i> Air Temp</h6>
-                                <p class="display-4">{{ recommendations.weekly_plan[0].air_temp }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="metric-box text-center p-3">
-                                <h6><i class="fas fa-thermometer-half"></i> Soil Temp</h6>
-                                <p class="display-4">{{ recommendations.weekly_plan[0].soil_temp }}</p>
-                                {% if soil_temperature %}
-                                <small>Current: {{ soil_temperature }}°C</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Upcoming Schedule Chart -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title">Upcoming Water Requirements</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="waterChart" height="100"></canvas>
-            </div>
-        </div>
-
-        <!-- Harvest Information Card -->
-        <div class="card border-info mb-4">
-            <div class="card-header">
-                <h5 class="card-title">Harvest Information</h5>
-            </div>
-            <div class="card-body">
+            <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="text-center p-3">
-                            <h6><i class="far fa-calendar-alt"></i> Expected Harvest</h6>
-                            <p class="h4">{{ harvest_date }}</p>
-                        </div>
+                        <div id="cropChartContainer" class="chart-container"></div>
+                        <h6>Water Needs Weekly Plan</h6>
+                        <div id="waterTimeline"></div>
                     </div>
                     <div class="col-md-6">
-                        <div class="text-center p-3">
-                            <h6><i class="far fa-clock"></i> Time Remaining</h6>
-                            <p class="h4">{{ weeks_remaining }} weeks</p>
+                        <div class="card">
+                            <div class="card-header">Requirements</div>
+                            <ul class="list-group list-group-flush" id="requirementsList">
+                                <!-- Dynamic content -->
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Immediate Actions Card -->
-        {% if recommendations.actions %}
-        <div class="card border-warning mb-4">
-            <div class="card-header">
-                <h5 class="card-title">Immediate Actions</h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for action in recommendations.actions %}
-                    <li class="list-group-item"><i class="fas fa-check-circle text-success mr-2"></i>{{ action }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-        {% endif %}
     </div>
-  </article>
-  {% endif %}
-
-  <!-- Chart.js Script -->
-
-  <!-- Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</div>
 
 
     </main>
-  </body>
-
-
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    
-    
-    
-<!-- Chart.js Script -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Prepare data for the chart
-    const weeks = [];
-    const waterData = [];
-    
-    {% if recommendations %}
-        {% for week in recommendations.weekly_plan %}
-            weeks.push('Week {{ week.week }}');
-            waterData.push({{ week.water }});
-        {% endfor %}
-    {% endif %}
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+     // Handle form submission
+        document.getElementById('cropPlanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const location = document.getElementById('location').value;
+            const crop = document.getElementById('crop').value;
+            
+            // Show loading state
+            $('#cropModal .modal-body').html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Loading ${crop} plan for ${location}...</p>
+                </div>
+            `);
+            $('#cropModal').modal('show');
+            
+            // Fetch crop details
+            fetch(`/crop-details?crop=${encodeURIComponent(crop)}&location=${encodeURIComponent(location)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) throw new Error(data.error);
+                    renderPlan(data, crop, location);
+                })
+                .catch(error => {
+                    $('#cropModal .modal-body').html(`
+                        <div class="alert alert-danger">
+                            Failed to load plan: ${error.message}
+                        </div>
+                    `);
+                });
+        });
 
-    // Create the chart
-    const ctx = document.getElementById('waterChart').getContext('2d');
-    const waterChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: weeks,
-            datasets: [{
-                label: 'Water Requirements (mm)',
-                data: waterData,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `Water: ${context.parsed.y} mm`;
+        function renderPlan(data, crop, location) {
+            try {
+                // Clear previous content
+                $('#cropModal .modal-body').html('');
+                
+                // Set modal title
+                $('#cropModalLabel').text(`${crop} Growth Plan - ${location}`);
+                
+                // Create charts container
+                const chartsHtml = `
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="chart-container">
+                                <canvas id="waterChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="tempChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="sunshineChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#cropModal .modal-body').append(chartsHtml);
+                
+                // Validate data
+                if (!data?.weekly_requirements?.length) {
+                    throw new Error('No weekly data available');
+                }
+
+                const weeks = data.weekly_requirements.map(w => `Week ${w.week}`);
+                
+                // Water Chart
+                new Chart(document.getElementById('waterChart'), {
+                    type: 'line',
+                    data: {
+                        labels: weeks,
+                        datasets: [{
+                            label: 'Water (mm/week)',
+                            data: data.weekly_requirements.map(w => Number(w.water_mm) || 0),
+                            borderColor: '#34A0A4',
+                            borderWidth: 2,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Weekly Water Requirements'
+                            }
                         }
                     }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Water (mm)'
+                });
+
+                // Temperature Chart
+                new Chart(document.getElementById('tempChart'), {
+                    type: 'line',
+                    data: {
+                        labels: weeks,
+                        datasets: [
+                            {
+                                label: 'Min Temp (°C)',
+                                data: data.weekly_requirements.map(w => Number(w.temp_min_c) || 0),
+                                borderColor: '#FF6B6B',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Max Temp (°C)',
+                                data: data.weekly_requirements.map(w => Number(w.temp_max_c) || 0),
+                                borderColor: '#FF9B54',
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Temperature Ranges'
+                            }
+                        }
                     }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Week'
+                });
+
+                // Sunshine Chart
+                new Chart(document.getElementById('sunshineChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: weeks,
+                        datasets: [{
+                            label: 'Sunlight (hours/day)',
+                            data: data.weekly_requirements.map(w => Number(w.sunshine_hours) || 0),
+                            backgroundColor: '#FFD93D'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Daily Sunlight Requirements'
+                            }
+                        }
                     }
-                }
+                });
+
+                // Weekly tasks checklist
+                const tasksHtml = data.weekly_requirements.map(week => `
+                    <div class="week-task mb-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input big-checkbox" 
+                                   id="week-${week.week}">
+                            <label class="form-check-label" for="week-${week.week}">
+                                <strong>Week ${week.week}:</strong> ${week.summary || formatWeekSummary(week)}
+                            </label>
+                        </div>
+                    </div>
+                `).join('');
+
+                $('#cropModal .modal-body').append(`
+                    <div class="weekly-checklist mt-4">
+                        <h4><i class="fas fa-tasks"></i> Weekly Action Plan</h4>
+                        <div class="checklist-container">
+                            ${tasksHtml}
+                        </div>
+                    </div>
+                `);
+
+                // Set up PDF download button
+                document.getElementById('downloadPdf').onclick = function() {
+                    downloadAsPDF();
+                };
+
+            } catch (e) {
+                console.error('Error rendering plan:', e);
+                $('#cropModal .modal-body').html(`
+                    <div class="alert alert-danger">
+                        Error displaying plan: ${e.message}
+                        <div class="mt-2 raw-data">${JSON.stringify(data, null, 2)}</div>
+                    </div>
+                `);
             }
         }
-    });
+
+        function formatWeekSummary(week) {
+            let summary = `Water: ${week.water_mm}mm, Temp: ${week.temp_min_c}-${week.temp_max_c}°C`;
+            if (week.sunshine_hours) {
+                summary += `, Sun: ${week.sunshine_hours}hrs`;
+            }
+            if (week.fertilizer) {
+                summary += `, Fertilizer: ${week.fertilizer}`;
+            }
+            return summary;
+        }
+
+        function downloadAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const modalContent = document.querySelector('.modal-content');
+            const downloadBtn = document.getElementById('downloadPdf');
+            
+            // Show loading state
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            downloadBtn.disabled = true;
+            
+            html2canvas(modalContent, {
+                scale: 2,
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm'
+                });
+                
+                // Calculate dimensions
+                const imgWidth = 210; // A4 width in mm
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                
+                // Add image to PDF
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                
+                // Save PDF
+                const cropName = document.getElementById('cropModalLabel').textContent.replace(/ /g, '_');
+                pdf.save(`${cropName}_Growth_Plan.pdf`);
+                
+                // Restore button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            }).catch(error => {
+                console.error('PDF generation failed:', error);
+                alert('Failed to generate PDF. Please try again.');
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            });
+        }
     </script>
-
     
-
+</body>
 </html>
