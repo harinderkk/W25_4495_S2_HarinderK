@@ -1,57 +1,968 @@
-{% extends "layout.html" %}
-{% block content %}
-        <article class="media content-section">
-            <div style="position: relative; text-align: center; color: white;">
-                <img src="/static/background.jpeg" class="img-fluid" alt="Responsive image">
-                <div style="position: absolute;
-                  top: 50%;
-                  left: 50%;
-                  transform: translate(-50%, -50%);
-                  color: white;
-                  font-size: 30px;">
-                  Welcome to Intelligent Crop Planning
-                </div>
-            </div>
-          <br/>
-          
-        </article>
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poiret+One">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css">
+
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+
+    {% if title %}
+        <title>Intelligent Crop - {{ title }}</title>
+    {% else %}
+        <title>Intelligent Crop</title>
+    {% endif %}
     
-        <article class="media content-section">
-        <div class="row">
-            <div class="col-sm-6">
-                <div class="card" style="width: 18rem;">
-                    <img class="card-img-top" src="/static/weather.jpeg" alt="Card image cap">
-                    <div class="card-body">
-                        <h5 class="card-title">Check Weather and Soil Conditions</h5>
-                        <p class="card-text">Get real-time weather and soil information for your location with a single click.</p>
-                        <a href="/weather" class="btn btn-primary">Go</a>
-                    </div>
-                </div>
-            </div>
-            <!--
-            <div class="col-sm-6">
-                <div class="card" style="width: 18rem;">
-                    <img class="card-img-top" src="/static/crop_rec.jpeg" alt="Card image cap">
-                    <div class="card-body">
-                        <h5 class="card-title">Start Your Crop Journey</h5>
-                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
-                        <a href="/crop-journey" class="btn btn-primary">Go</a>
-                    </div>
-                </div>
-            </div>
-            -->
-            <div class="col-sm-6">
-                <div class="card" style="width: 18rem;">
-                    <img class="card-img-top" src="/static/crop_rec.jpeg" alt="Card image cap">
-                    <div class="card-body">
-                        <h5 class="card-title">Start Your Crop Journey </h5>
-                        <p class="card-text">Track your crop’s journey with growth stages, irrigation tips, and real-time weather updates.</p>
-                        <a href="/care-plan" class="btn btn-primary">Go</a>
-                    </div>
-                </div>
+    <style>
+        :root {
+            --temp-color: #52B69A;
+            --moisture-color: #99D98C;
+            --success-color: #34A0A4;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .soil-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        }
+        .soil-card-header {
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            background-color: #52B69A;
+            padding: 10px;
+        }
+        .temp-header {
+            background-color: var(--temp-color);
+            color: white;
+        }
+        .moisture-header {
+            background-color: var(--moisture-color);
+            color: white;
+        }
+        .current-value {
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+        .unit {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .trend-indicator {
+            font-size: 1.2rem;
+            margin-left: 5px;
+        }
+        .trend-up {
+            color: var(--temp-color);
+        }
+        .trend-down {
+            color: var(--moisture-color);
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            border-bottom: 3px solid var(--success-color);
+        }
+        .tab-content {
+            padding: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+      <nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top">
+    <div class="container">
+        <a class="navbar-brand mr-4" href="/">Intelligent Crop Planning</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarToggle">
+            <div class="navbar-nav mr-auto">
+                <a class="nav-item nav-link" href="/">Home</a>
+                <a class="nav-item nav-link" href="/about">About</a>
             </div>
 
+            <div class="navbar-nav">
+                {% if session.get('email') %}
+                    <span class="nav-item nav-link text-light mr-2">
+                        {{ session['email'] }}
+                    </span>
+                    <a class="nav-item nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                {% else %}
+                    <a class="nav-item nav-link" href="{{ url_for('login') }}">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <a class="nav-item nav-link" href="{{ url_for('register') }}">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                {% endif %}
+            </div>
         </div>
-        </article>
+    </div>
+</nav>
+    </header>
+    
+    <main role="main" class="container">
+      <div class="row justify-content-md-center">
+        <div class="col-md-6">
+
+          <div style="margin-top: 2rem;">
+          <center>
+          <label for="location" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 20px; color: #34a0a4; position: relative;">
+            Check a different location
+          </label>
+          </center>
+          <form method="POST" action="/" style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+          ">
+          <input
+            type="text"
+            name="location"
+            placeholder="e.g., New Westminster"
+            style="
+              width: 100%;
+              padding: 0.50rem 1rem;
+              border: 2px solid #34a0a4;
+              border-radius: 12px;
+              font-size: 1rem;
+              outline: none;"
+          />
+          <button type=submit  style="
+              background-color: #fafafa;
+              border: none;
+              color: #fafafa;
+              font-size: 2em;
+              padding: 0.5rem 1rem;
+              cursor: pointer;"
+            > 🔍 </button>
+        </form>
+        </div>
+          <!-- Weather Details Widget -->
+          <br/><br/><br/>
+          {% if weather_data %}
+          <div class="widget">
+            <div class="weatherIcon"><i class="wi wi-day-cloudy"></i></div>
+            <div class="weatherInfo">
+              <div class="temperature"><span> {{ weather_data.temperature }}&deg;</span></div>
+              <div class="description">    
+                <div class="weatherCondition">{{ location }}</div>    
+                <div class="place">{{ weather_data.description }}</div>
+              </div>
+            </div>
+            <div class="humidity"> {{ weather_data.humidity }}% Humidity</div>
+            {% if ph_value %}
+            <div class="ph">{{ ph_value }} SOIL PH</div>
+            {% endif %}
+          </div>
+          {% endif %}
+          
+          <!-- Additional Information Card -->
+          
+        </div>
+        <div style="
+              max-width: 550px;
+              margin: 2rem auto;
+              background-color: #ffffff;
+              border-radius: 24px;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+              padding: 1.5rem;
+              font-family: 'Segoe UI', sans-serif;
+              text-align: left;
+            ">
+              <div style="color: #34a0a4; font-size: 3rem; font-weight: 800; line-height: 1.2; text-transform: uppercase;">
+                The<br>
+                Farm-Advisor<br>
+                Chatbot
+              </div>
+
+              <p style="margin-top: 1.5rem; font-size: 1.2rem; color: black;">
+                Try the new <strong>FarmAdvisor Bot</strong>, an AI chat bot that can answer your farming related queries.
+              </p>
+              <a href="/chatbot">
+              <button style="
+                margin-top: 1.5rem;
+                padding: 0.8rem 1.6rem;
+                font-size: 1rem;
+                font-weight: 600;
+                background-color: #76C893;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+              " 
+              onmouseover="this.style.backgroundColor='#168aad'" 
+              onmouseout="this.style.backgroundColor='#34a0a4'">
+                Try It
+              
+              </button></a>
+            </div>
+
         
-{% endblock content %}
+        <div class="col-md-6">
+          <!-- Soil Conditions Dashboard -->
+          <div class="soil-card mt-4">
+            <div class="soil-card-header">
+              <h2 class="mb-0">Soil Conditions</h2>
+            </div>
+            <div class="card-body">
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-header temp-header">
+                      <h3 class="mb-0">Current Temperature</h3>
+                    </div>
+                    <div class="card-body text-center">
+                      <div class="current-value">
+                        <span id="currentTemp">--</span>
+                        <span class="unit">°C</span>
+                        <span id="tempTrend" class="trend-indicator"></span>
+                      </div>
+                      <div id="tempTrendText" class="text-muted"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-header moisture-header">
+                      <h3 class="mb-0">Current Moisture</h3>
+                    </div>
+                    <div class="card-body text-center">
+                      <div class="current-value">
+                        <span id="currentMoisture">--</span>
+                        <span class="unit">m³/m³</span>
+                        <span id="moistureTrend" class="trend-indicator"></span>
+                      </div>
+                      <div id="moistureTrendText" class="text-muted"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ul class="nav nav-tabs" id="soilTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="temp-tab" data-toggle="tab" data-target="#temp-tab-pane" type="button" role="tab">
+                    <i class="fas fa-thermometer-half"></i> Temperature
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="moisture-tab" data-toggle="tab" data-target="#moisture-tab-pane" type="button" role="tab">
+                    <i class="fas fa-tint"></i> Moisture
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="combined-tab" data-toggle="tab" data-target="#combined-tab-pane" type="button" role="tab">
+                    <i class="fas fa-chart-line"></i> Combined
+                  </button>
+                </li>
+              </ul>
+              
+              <div class="tab-content" id="soilTabsContent">
+                <div class="tab-pane fade show active" id="temp-tab-pane" role="tabpanel" aria-labelledby="temp-tab">
+                  <div class="chart-container">
+                    <canvas id="soilTempChart"></canvas>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="moisture-tab-pane" role="tabpanel" aria-labelledby="moisture-tab">
+                  <div class="chart-container">
+                    <canvas id="soilMoistureChart"></canvas>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="combined-tab-pane" role="tabpanel" aria-labelledby="combined-tab">
+                  <div class="chart-container">
+                    <canvas id="combinedChart"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+    <br/><br/>
+<div class="container mt-4">
+    <center>
+    <div style="color: #52B69A; font-size: 3rem; font-weight: 600; line-height: 1.2; ">
+          Best Crops to grow in {{ location }}  
+    </div>
+    </center><br/><br/>
+    <div class="row" id="cropRecommendations">
+        {% for crop in crop_recommendations.recommendations %}
+        <div class="col-md-4 mb-4">
+            <div class="card crop-card" onclick="showCropDetails('{{ crop.name }}')" style="cursor: pointer;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ crop.name }}</h5>
+                    <p class="card-text">{{ crop.reason }}</p>
+                    <div class="badge badge-primary">{{ crop.water_needs }} Water</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        <br/><br/><br/><br/><hr>
+    </div>
+
+    
+</div>
+<br/><br/>
+
+<div class="modal fade" id="cropModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cropModalLabel"></h5>
+                 <div>
+                  <button id="downloadPdf" class="btn btn-sm btn-success mr-2">
+                      <i class="fas fa-file-pdf"></i> Save Plan
+                  </button>
+                  <button type="button" class="close" data-dismiss="modal">
+                      <span>&times;</span>
+                  </button>
+                  </div>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="cropChartContainer" class="chart-container"></div>
+                        <h6>Water Needs Weekly Plan</h6>
+                        <div id="waterTimeline"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">Requirements</div>
+                            <ul class="list-group list-group-flush" id="requirementsList">
+                                <!-- Dynamic content -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+      </div>
+    </main>
+    
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <script>
+
+
+
+        // Parse the chart data from Flask
+        const chartData = JSON.parse('{{ chart_data|safe }}');
+        let tempChart, moistureChart, combinedChart;
+        
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create all charts
+            tempChart = createTempChart();
+            moistureChart = createMoistureChart();
+            combinedChart = createCombinedChart();
+            
+            
+            updateCurrentValues();
+            
+            // Enable Bootstrap tabs
+            $('#soilTabs a').on('click', function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+        });
+        
+        // Function to create temperature chart
+        function createTempChart() {
+            if (!chartData || !chartData.temperature) return null;
+            
+            const tempData = chartData.temperature;
+            const hourlyData = tempData.hourly.map(item => ({
+                x: item[0],
+                y: item[1]
+            }));
+            
+            const dailyAvgData = tempData.labels.map((label, index) => ({
+                x: label,
+                y: tempData.daily_avg[index]
+            }));
+            
+            const ctx = document.getElementById('soilTempChart').getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Hourly Temperature',
+                            data: hourlyData,
+                            borderColor: 'rgba(82, 182, 154, 1)',
+                            backgroundColor: 'rgba(82, 182, 154, 0.1)',
+                            pointRadius: 2,
+                            pointHoverRadius: 5,
+                            showLine: false
+                        },
+                        {
+                            label: 'Daily Average',
+                            data: dailyAvgData,
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: getChartOptions('Soil Temperature at 10cm Depth', '°C', true)
+            });
+        }
+        
+        // Function to create moisture chart
+        function createMoistureChart() {
+            if (!chartData || !chartData.moisture) return null;
+            
+            const moistureData = chartData.moisture;
+            const hourlyData = moistureData.hourly.map(item => ({
+                x: item[0],
+                y: item[1]
+            }));
+            
+            const dailyAvgData = moistureData.labels.map((label, index) => ({
+                x: label,
+                y: moistureData.daily_avg[index]
+            }));
+            
+            const ctx = document.getElementById('soilMoistureChart').getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Hourly Moisture',
+                            data: hourlyData,
+                            borderColor: 'rgba(153, 217, 140, 1)',
+                            backgroundColor: 'rgba(153, 217, 140, 0.1)',
+                            pointRadius: 2,
+                            pointHoverRadius: 5,
+                            showLine: false
+                        },
+                        {
+                            label: 'Daily Average',
+                            data: dailyAvgData,
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: getChartOptions('Soil Moisture at 10cm Depth', 'm³/m³', false)
+            });
+        }
+        
+        // Function to create combined chart
+        function createCombinedChart() {
+            if (!chartData || !chartData.temperature || !chartData.moisture) return null;
+            
+            const tempData = chartData.temperature;
+            const moistureData = chartData.moisture;
+            
+            const tempDailyAvg = tempData.labels.map((label, index) => ({
+                x: label,
+                y: tempData.daily_avg[index]
+            }));
+            
+            const moistureDailyAvg = moistureData.labels.map((label, index) => ({
+                x: label,
+                y: moistureData.daily_avg[index]
+            }));
+            
+            const ctx = document.getElementById('combinedChart').getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Temperature',
+                            data: tempDailyAvg,
+                             borderColor: 'rgba(82, 182, 154, 1)',
+                            backgroundColor: 'rgba(82, 182, 154, 1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            yAxisID: 'y',
+                            fill: false
+                        },
+                        {
+                            label: 'Moisture',
+                            data: moistureDailyAvg,
+                            borderColor: 'rgba(153, 217, 140, 1)',
+                            backgroundColor: 'rgba(153, 217, 140, 1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            yAxisID: 'y1',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                tooltipFormat: 'MMM dd, yyyy',
+                                displayFormats: {
+                                    day: 'MMM dd'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)'
+                            },
+                            min: function(context) {
+                                const min = Math.min(...chartData.temperature.daily_avg);
+                                return Math.floor(min) - 2;
+                            },
+                            max: function(context) {
+                                const max = Math.max(...chartData.temperature.daily_avg);
+                                return Math.ceil(max) + 2;
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Moisture (m³/m³)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            min: 0,
+                            max: function(context) {
+                                const max = Math.max(...chartData.moisture.daily_avg);
+                                return Math.min(1, Math.ceil(max * 10) / 10 + 0.1);
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}${context.datasetIndex === 0 ? '°C' : 'm³/m³'}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Soil Temperature and Moisture at 10cm Depth',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+        
+       
+        function getChartOptions(title, unit, isTemp) {
+            const color = isTemp ? '220, 53, 69' : '0, 123, 255';
+            const data = isTemp ? chartData.temperature : chartData.moisture;
+            
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'MMM dd, yyyy',
+                            displayFormats: {
+                                day: 'MMM dd'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: title.includes('Temperature') ? `Temperature (${unit})` : `Moisture (${unit})`
+                        },
+                        min: function(context) {
+                            const values = data.daily_avg;
+                            const min = Math.min(...values);
+                            return isTemp ? Math.floor(min) - 2 : 0;
+                        },
+                        max: function(context) {
+                            const values = data.daily_avg;
+                            const max = Math.max(...values);
+                            return isTemp ? Math.ceil(max) + 2 : Math.min(1, Math.ceil(max * 10) / 10 + 0.1);
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y}${unit}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: title,
+                        font: {
+                            size: 16
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            };
+        }
+        
+        // Update current values and trends
+        function updateCurrentValues() {
+            if (!chartData || !chartData.temperature || !chartData.moisture) return;
+            
+            const tempData = chartData.temperature;
+            const moistureData = chartData.moisture;
+            
+            // Update temperature
+            if (tempData.hourly && tempData.hourly.length > 0) {
+                const currentTemp = tempData.hourly[tempData.hourly.length - 1][1];
+                document.getElementById('currentTemp').textContent = currentTemp.toFixed(1);
+                
+                // Calculate temperature trend if we have enough data
+                if (tempData.daily_avg && tempData.daily_avg.length >= 6) {
+                    const recentAvg = tempData.daily_avg.slice(-3).reduce((a, b) => a + b, 0) / 3;
+                    const previousAvg = tempData.daily_avg.slice(-6, -3).reduce((a, b) => a + b, 0) / 3;
+                    const trend = recentAvg - previousAvg;
+                    
+                    const trendElement = document.getElementById('tempTrend');
+                    const trendTextElement = document.getElementById('tempTrendText');
+                    
+                    if (Math.abs(trend) < 0.5) {
+                        trendElement.textContent = '→';
+                        trendElement.className = 'trend-indicator';
+                        trendTextElement.textContent = 'Stable temperature trend';
+                    } else if (trend > 0) {
+                        trendElement.textContent = '↑';
+                        trendElement.className = 'trend-indicator trend-up';
+                        trendTextElement.textContent = `Increasing (${Math.abs(trend).toFixed(1)}°C)`;
+                    } else {
+                        trendElement.textContent = '↓';
+                        trendElement.className = 'trend-indicator trend-down';
+                        trendTextElement.textContent = `Decreasing (${Math.abs(trend).toFixed(1)}°C)`;
+                    }
+                }
+            }
+            
+            // Update moisture
+            if (moistureData.hourly && moistureData.hourly.length > 0) {
+                const currentMoisture = moistureData.hourly[moistureData.hourly.length - 1][1];
+                document.getElementById('currentMoisture').textContent = currentMoisture.toFixed(3);
+                
+                // Calculate moisture trend 
+                if (moistureData.daily_avg && moistureData.daily_avg.length >= 6) {
+                    const recentAvg = moistureData.daily_avg.slice(-3).reduce((a, b) => a + b, 0) / 3;
+                    const previousAvg = moistureData.daily_avg.slice(-6, -3).reduce((a, b) => a + b, 0) / 3;
+                    const trend = recentAvg - previousAvg;
+                    
+                    const trendElement = document.getElementById('moistureTrend');
+                    const trendTextElement = document.getElementById('moistureTrendText');
+                    
+                    if (Math.abs(trend) < 0.01) {
+                        trendElement.textContent = '→';
+                        trendElement.className = 'trend-indicator';
+                        trendTextElement.textContent = 'Stable moisture trend';
+                    } else if (trend > 0) {
+                        trendElement.textContent = '↑';
+                        trendElement.className = 'trend-indicator trend-up';
+                        trendTextElement.textContent = `Increasing (${(Math.abs(trend)*1000).toFixed(0)} mm³)`;
+                    } else {
+                        trendElement.textContent = '↓';
+                        trendElement.className = 'trend-indicator trend-down';
+                        trendTextElement.textContent = `Decreasing (${(Math.abs(trend)*1000).toFixed(0)} mm³)`;
+                    }
+                }
+            }
+        }
+
+
+        /* new javascript for cards */
+        // Add to the existing script
+function showCropDetails(cropName) {
+    const location = "{{ location }}";
+    
+    // Show loading spinner
+    $('#cropModal .modal-body').html(`
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading details for ${cropName}...</p>
+        </div>
+    `);
+    $('#cropModal').modal('show');
+
+    fetch(`/crop-details?crop=${encodeURIComponent(cropName)}&location=${encodeURIComponent(location)}`)
+        .then(response => response.json())
+        .then(data => {
+            if(data.error) throw new Error(data.error);
+            
+            $('#cropModalLabel').text(cropName);
+            renderCharts(data);
+        })
+        .catch(error => {
+            $('#cropModal .modal-body').html(`
+                <div class="alert alert-danger">
+                    Failed to load details: ${error.message}
+                </div>
+            `);
+        });
+}
+
+
+
+
+function renderCharts(data) {
+    try {
+        // Clear previous charts
+        $('#waterChart, #tempChart, #sunshineChart').remove();
+        $('#cropModal .modal-body').html(`
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="chart-container">
+                        <canvas id="waterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <canvas id="tempChart"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="sunshineChart"></canvas>
+                </div>
+            </div>
+        `);
+
+        // Validate data structure
+        if (!data?.weekly_requirements?.length) {
+            throw new Error('No weekly data available');
+        }
+
+        const weeks = data.weekly_requirements.map(w => `Week ${w.week}`);
+        
+        // Water Chart with error boundaries
+        new Chart(document.getElementById('waterChart'), {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [{
+                    label: 'Water (mm/week)',
+                    data: data.weekly_requirements.map(w => Number(w.water_mm) || 0),
+                    borderColor: '#34A0A4',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Weekly Water Requirements'
+                    }
+                }
+            }
+        });
+
+        // Temperature Chart
+        new Chart(document.getElementById('tempChart'), {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [
+                    {
+                        label: 'Min Temp (°C)',
+                        data: data.weekly_requirements.map(w => Number(w.temp_min_c) || 0),
+                        borderColor: '#FF6B6B',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Max Temp (°C)',
+                        data: data.weekly_requirements.map(w => Number(w.temp_max_c) || 0),
+                        borderColor: '#FF9B54',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Temperature Ranges'
+                    }
+                }
+            }
+        });
+
+        // Sunshine Chart
+        new Chart(document.getElementById('sunshineChart'), {
+            type: 'bar',
+            data: {
+                labels: weeks,
+                datasets: [{
+                    label: 'Sunlight (hours/day)',
+                    data: data.weekly_requirements.map(w => Number(w.sunshine_hours) || 0),
+                    backgroundColor: '#FFD93D'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Daily Sunlight Requirements'
+                    }
+                }
+            }
+        });
+
+        // Weekly taks checklist
+        const tasksHtml = data.weekly_requirements.map(week => `
+             <div class="week-task mb-2">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input big-checkbox" 
+                       id="week-${week.week}">
+                <label class="form-check-label" for="week-${week.week}">
+                    <strong>Week ${week.week}:</strong> ${week.summary}
+                </label>
+            </div>
+        </div>
+        `).join('');
+
+        $('#cropModal .modal-body').append(`
+            <div class="weekly-checklist mt-4">
+              <h4><i class="fas fa-tasks"></i> Weekly Action Plan</h4>
+              <div class="checklist-container">
+                ${tasksHtml}
+              </div>
+            </div>
+        `);
+
+
+       // Js to download the plan in PDF
+      document.getElementById('downloadPdf').addEventListener('click', async function() {
+    const { jsPDF } = window.jspdf;
+    const modalContent = document.querySelector('.modal-content');
+    
+    // Show loading state
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+    this.disabled = true;
+    
+    try {
+        // Capture entire modal
+        const canvas = await html2canvas(modalContent, {
+            scale: 2, // Higher quality
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            scrollY: -window.scrollY
+        });
+        
+        // Create PDF
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm'
+        });
+        
+        // Calculate dimensions
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        
+        // Add image to PDF
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        // Save PDF
+        const cropName = document.getElementById('cropModalLabel').textContent.replace(/ /g, '_');
+        pdf.save(`${cropName}_Growth_Plan.pdf`);
+        
+    } catch (error) {
+        console.error('PDF generation failed:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        // Restore button state
+        this.innerHTML = originalText;
+        this.disabled = false;
+    }
+});
+
+
+    } catch (e) {
+        console.error('Chart rendering error:', e);
+        $('#cropModal .modal-body').html(`
+            <div class="alert alert-danger">
+                Error displaying charts: ${e.message}
+                <div class="mt-2 raw-data">${JSON.stringify(data, null, 2)}</div>
+            </div>
+        `);
+    }
+}
+
+    </script>
+</body>
+</html>
