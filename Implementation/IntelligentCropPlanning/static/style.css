@@ -1,15 +1,110 @@
+/* Google Fonts - Poiret One */
+@import url('https://fonts.googleapis.com/css?family=Poiret+One');
+
+/* Weather Icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css');
+
 body {
   background: #fafafa;
   color: #333333;
   margin-top: 5rem;
 }
 
+.widget {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  width: 100%;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.weatherIcon {
+  flex: 1 100%;
+  height: 60%;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  background: #FAFAFA;
+  font-family: 'Poiret One', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+}
+
+.weatherInfo {
+  flex: 0 0 40%;
+  height: 40%;
+  background: #52B69A;
+  /*border-bottom-left-radius: 10px;*/
+  display: flex;
+  align-items: center;
+  color: white;
+  padding: 15px;
+}
+
+.temperature {
+  flex: 0 0 40%;
+  font-size: 50px;
+  display: flex;
+  justify-content: center;
+}
+
+.description {
+  flex: 0 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.weatherCondition {
+  text-transform: uppercase;
+  font-size: 30px;
+  font-weight: 300;
+}
+
+.place {
+  font-size: 20px;
+}
+
+.humidity {
+  flex: 0 0 20%;
+  height: 40%;
+  background: #76C893;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  padding: 10px;
+}
+
+.ph {
+  flex: 0 0 20%;
+  height: 40%;
+  background: #99D98C;
+  border-bottom-right-radius: 10px;
+  border-bottom-left-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  padding: 10px;
+}
+
+
+
 h1, h2, h3, h4, h5, h6 {
   color: #444444;
 }
 
 .bg-steel {
-  background-color: #00A36C;
+  background-color: #44967f;  /*always this*/
 }
 
 .site-header .navbar-nav .nav-link {
@@ -78,3 +173,151 @@ a.article-title:hover {
 .account-heading {
   font-size: 2.5rem;
 }
+
+.card {
+  border: none;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  transition: all 0.3s ease;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 20px;
+}
+
+.btn-primary:hover {
+  background-color: #218838 !important;
+  border-color: #218838 !important;
+  transform: translateY(-2px);
+}
+
+
+
+
+
+
+.chat-box {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    .input-group {
+        width: 100%;
+    }
+    textarea.form-control {
+        min-height: 80px;
+        max-height: auto;
+    }
+    @media (max-width: 576px) {
+        .chat-box {
+            min-height: 200px;
+            max-height: 300px;
+        }
+        textarea.form-control {
+            min-height: 60px;
+        }
+    }
+
+
+
+
+
+:root {
+            --temp-color: #52B69A;
+            --moisture-color: #99D98C;
+            --success-color: #34A0A4;
+  }
+  .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+      margin-bottom: 10px;
+  }
+  .soil-card {
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  }
+  .soil-card-header {
+      color: white;
+      border-radius: 10px 10px 0 0 !important;
+      background-color: #52B69A;
+      padding: 10px;
+  }
+  .temp-header {
+      background-color: var(--temp-color);
+      color: white;
+  }
+  .moisture-header {
+      background-color: var(--moisture-color);
+      color: white;
+  }
+  .current-value {
+      font-size: 2.5rem;
+      font-weight: 300;
+  }
+  .unit {
+      font-size: 1rem;
+      color: #6c757d;
+  }
+  .trend-indicator {
+      font-size: 1.2rem;
+      margin-left: 5px;
+  }
+  .trend-up {
+      color: var(--temp-color);
+  }
+  .trend-down {
+      color: var(--moisture-color);
+  }
+  .nav-tabs .nav-link.active {
+      font-weight: bold;
+      border-bottom: 3px solid var(--success-color);
+  }
+  .tab-content {
+      padding: 15px 0;
+  }
+
+
+
+
+.crop-card {
+    transition: transform 0.2s;
+    border: 2px solid #34A0A4;
+}
+.crop-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(52, 160, 164, 0.3);
+}
+.progress-bar {
+    font-size: 0.8rem;
+    padding-left: 8px;
+    text-align: left;
+}
+
+
+.weekly-tasks {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.week-tasks {
+    padding: 10px;
+    border-left: 3px solid #34A0A4;
+    margin-bottom: 15px;
+}
+
+.form-check {
+    margin: 8px 0;
+}
+
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
