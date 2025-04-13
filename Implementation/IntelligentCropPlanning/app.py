@@ -56,7 +56,7 @@ client = OpenAI(
 )
 
 
-
+# Get weather data in JSON format
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
     complete_url = base_url + 'q=' + location + '&appid=' + api_key + '&units=metric'
@@ -156,14 +156,12 @@ def get_ph_value(weather_data):
 def fetch_soil_data_selenium(lon, lat):
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode
-    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration (often needed for headless)
+    chrome_options.add_argument("--headless")  
+    chrome_options.add_argument("--disable-gpu") 
     chrome_options.add_argument("--window-size=1920,1080") 
     
     driver = webdriver.Chrome(options=chrome_options)
 
-
-    # Open the website
     url = f"https://soiltemperature.app/results?lat={lat}&lng={lon}"
     driver.get(url)
 
@@ -172,11 +170,10 @@ def fetch_soil_data_selenium(lon, lat):
     # Find all rows in the table
     rows = driver.find_elements(By.CLASS_NAME, 'row')
 
-    # Initialize a list to store the data
     soil_data = []
 
-    # Iterate through each row
-    for row in rows[1:]:  # Skip the first row (header)
+    
+    for row in rows[1:]:  # Skip the first row (headerr)
         # Find all columns in the row
         cols = row.find_elements(By.CLASS_NAME, 'col')
 
@@ -193,12 +190,11 @@ def fetch_soil_data_selenium(lon, lat):
                 'moisture': moisture
             })
 
-    # Close the browser
     driver.quit()
 
     return soil_data
 
-
+# Get soil temprature adn moisture data
 def fetch_soil_temperature_history(latitude, longitude, days=30):
     """Fetch historical soil temperature data"""
     end_date = datetime.now().date()
@@ -220,7 +216,7 @@ def fetch_soil_temperature_history(latitude, longitude, days=30):
     return None
 
 
-
+# Create dynamo DB table
 def create_user_table():
     table = dynamodb.create_table(
         TableName='ChatUsers',
@@ -242,10 +238,11 @@ def create_user_table():
     table.wait_until_exists()
     print("Table created successfully!")
 
+#(Already run once to create table)
 #create_user_table()
 
 
-
+# Get user's IP address
 def get_public_ip():
     try:
         response = requests.get('https://api.ipify.org?format=json')
@@ -256,7 +253,7 @@ def get_public_ip():
         return "Could not fetch public IP."
 
 
-
+# Get location based on IP
 def get_location_from_ip(ip_address):
     try:
         response = requests.get(f'http://ip-api.com/json/{ip_address}').json()
@@ -304,8 +301,78 @@ def get_chat_response(messages):
     except Exception as e:
         return f"<p>Error: {str(e)}</p>"
 
+# Get 5 year temprature data from 2019-2024
+def get_5years_6month_temps(latitude, longitude):
+    base_url = "https://archive-api.open-meteo.com/v1/archive"
+    yearly_data = {}
 
-#================App Routes=========================================================
+    for year in range(2019, 2024):  # 2019–2023 (5 years)
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "start_date": f"{year}-04-01",
+            "end_date": f"{year}-10-31",  # April–October
+            "daily": "temperature_2m_mean",
+            "timezone": "auto"
+        }
+        response = requests.get(base_url, params=params)
+        if response.ok:
+            yearly_data[year] = response.json()["daily"]
+        else:
+            yearly_data[year] = None  # Mark failed years
+
+    return yearly_data
+
+# Summarize each month's data in 2019-2024
+def summarize_monthly_temps(yearly_data):
+    summaries = {}
+
+    for year, data in yearly_data.items():
+        if not data:
+            continue  # Skip failed years
+
+        daily_temps = data["temperature_2m_mean"]
+        daily_dates = data["time"]
+
+        monthly_temps = {
+            "April": [], "May": [], "June": [], 
+            "July": [], "August": [], "September": [], "October": []
+        }
+
+        for date_str, temp in zip(daily_dates, daily_temps):
+            date = datetime.strptime(date_str, "%Y-%m-%d")
+            month = date.strftime("%B")  # e.g., "April"
+            if month in monthly_temps:
+                monthly_temps[month].append(temp)
+
+        # Calculate monthly averages
+        monthly_avg = {
+            month: sum(temps) / len(temps) 
+            for month, temps in monthly_temps.items() 
+            if temps  # Skip empty months
+        }
+        summaries[year] = monthly_avg
+
+    return summaries
+
+# Format data to get avergae tempratures like:
+# - April: 2019=12.5°C, 2020=13.1°C, 2021=11.8°C, 2022=14.2°C, 2023=15.0°C
+
+def format_prompt_summary(temp_summaries):
+    prompt_lines = ["Historical April–October temperatures (2019–2023):"]
+
+    for month in ["April", "May", "June", "July", "August", "September", "October"]:
+        month_line = f"- {month}: "
+        year_avgs = []
+        for year, monthly_avg in temp_summaries.items():
+            if month in monthly_avg:
+                year_avgs.append(f"{year}={monthly_avg[month]:.1f}°C")
+        prompt_lines.append(month_line + ", ".join(year_avgs))
+
+
+#======================================================================================
+#                                  APP ROUTES                                         #
+#======================================================================================
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -413,11 +480,15 @@ def index():
             )) if 'soil_moisture_0_to_10cm' in hourly_data else []
     
         
+    data = get_5years_6month_temps(lat,lng) 
+    temp_summaries = summarize_monthly_temps(data)
+    summary_for_prompt = format_prompt_summary(temp_summaries)
 
-        # In the index route, modify the crop recommendation prompt and processing:
+
+
     crop_prompt = f"""
-    Given the following environmental conditions in {location}:
-    - Current temperature: {weather_data['temperature']}°C
+    Given historical temperature trends in {location} (April–October, 2019–2023):
+    {summary_for_prompt}
     - Soil pH: {ph_value}
     - Average soil temperature: {chart_data['temperature']['daily_avg'][-1] if chart_data['temperature']['daily_avg'] else 'unknown'}°C
     - Average soil moisture: {chart_data['moisture']['daily_avg'][-1] if chart_data['moisture']['daily_avg'] else 'unknown'}m³/m³
@@ -470,11 +541,9 @@ def index():
 
 
 
-
 @app.route('/crop-details')
 def crop_details():
     try:
-        # decode URL parameters
         crop_name = unquote(request.args.get('crop', ''))
         location = unquote(request.args.get('location', ''))
         
@@ -535,7 +604,7 @@ def crop_details():
         )
         print(response)
 
-        # Enhanced JSON extraction
+        # JSON extraction
         raw_response = response.choices[0].message.content
         json_str = re.sub(r'[\x00-\x1F]+', '', raw_response)  # Remove control characters
         json_str = re.search(r'\{.*\}', json_str, re.DOTALL).group()
@@ -552,43 +621,16 @@ def crop_details():
 
 
 
-@app.route('/weather', methods=['GET', 'POST'])
-def weather():
-
-    #Weather card data
-    weather_data = None
-    ph_value = None
-    if request.method == 'POST':  
-        location = request.form['location']
-
-        weather_json= get_weather_data(api_key, location)
-        if weather_json.get('cod') == 200:
-            weather_data = parse_weather_data(weather_json)
-        else:
-            weather_data = {'Error': weather_data.get('message', 'Unable to fetch data')}
-        
-        ph_value = get_ph_value(weather_json)
-
-
-    
-    return render_template('weather.html', 
-        weather_data=weather_data, 
-        ph_value=ph_value)
-
-
-
 
 @app.route('/care-plan', methods=['GET', 'POST'])
 def care_plan():
-
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
 
 
 
-
 @app.route('/chatbot', methods=['GET', 'POST'])
-def chatbot():s
-    
+def chatbot():
+
     # On reload (GET), clear chat history (start a new session)
     if request.method == 'GET':
         session['chat_history'] = []
@@ -623,11 +665,12 @@ def chatbot():s
 
 
 
-
 @app.route('/clear_chat', methods=['POST'])
 def clear_chat():
     session.pop('chat_history', None)
     return redirect('/chatbot')
+
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -644,8 +687,6 @@ def register():
         )
         return redirect(url_for('login'))
     return render_template('register.html')
-
-
 
 
 
@@ -697,16 +738,11 @@ def login():
 
 
 
-
 @app.route('/logout')
 def logout():
     session.clear()
     flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
-
-
-
-
 
 
 def save_chat_to_dynamodb(user_email, user_message, bot_response):
@@ -724,7 +760,7 @@ def get_user_chats(user_email):
     response = chat_table.query(
         IndexName='user_email-timestamp-index',  # Assumes GSI on user_email + timestamp
         KeyConditionExpression=boto3.dynamodb.conditions.Key('user_email').eq(user_email),
-        ScanIndexForward=False  # Most recent first
+        ScanIndexForward=False  
     )
     return response.get('Items', [])
 
