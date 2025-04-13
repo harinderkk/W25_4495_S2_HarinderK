@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import pandas as pd
 import requests
@@ -19,6 +20,9 @@ import uuid
 from botocore.exceptions import ClientError
 import json 
 from urllib.parse import unquote
+#from your_aws_module import users_table, ClientError
+
+
 
 app = Flask(__name__)
 
@@ -33,11 +37,15 @@ dynamodb = boto3.resource(
 users_table = dynamodb.Table('users')
 chat_table = dynamodb.Table('chat_history')
 
+
+
 #open weather api
 api_key='ea284063eb75d6986cbf37b5f104a552' # <====API KEY=======|
 
+
 load_dotenv()
 app.secret_key = os.getenv("SECRET_KEY") # Use a strong random secret key
+
 
 BASE_URL = "https://api.open-meteo.com/v1/"
 
@@ -572,144 +580,6 @@ def weather():
 
 @app.route('/care-plan', methods=['GET', 'POST'])
 def care_plan():
-    if request.method == 'POST':
-        # Get user inputs
-        selected_crop = request.form['crop'].strip().lower()  # Clean input
-        location = request.form['location']
-        planting_date = datetime.strptime(request.form['planting_date'], '%Y-%m-%d')
-        current_date = datetime.now()
-
-        # Fetch weather data
-        weather_json = get_weather_data(api_key, location)
-        if weather_json.get('cod') != 200:
-            return render_template('care_plan.html', error="Location not found")
-        weather_data = parse_weather_data(weather_json)
-        lon = weather_data.get('lon', 0)
-
-
-        # Load crop data
-        df_crop = pd.read_csv('csv-files/growth-conditions.csv')
-        df_crop['Crop'] = df_crop['Crop'].str.strip().str.lower()  # Clean CSV data
-
-        # Validate crop exists
-        crop_filter = df_crop['Crop'] == selected_crop
-        if not crop_filter.any():
-            return render_template('care_plan.html', 
-                                error=f"Crop '{selected_crop}' not found in database. Please select a valid crop.")
-        
-        crop_data = df_crop[crop_filter].iloc[0]  # Safe after validation
-
-        # Get ideal planting months
-        print(lon, 'and')
-        if lon >= 0:
-            hemisphere = 'Northern' 
-        else:
-            hemisphere = 'Southern'
-        if hemisphere == 'Northern':
-            start_month = crop_data['NH_Planting_Start']
-            end_month = crop_data['NH_Planting_End']
-        elif hemisphere == 'Southern':
-            start_month = crop_data['SH_Planting_Start']
-            end_month = crop_data['SH_Planting_End']
-
-        # Calculate next valid planting date
-        current_year = datetime.now().year
-        current_month = datetime.now().month
-        if start_month <= end_month:
-            valid_months = list(range(start_month, end_month + 1))
-        else:
-            valid_months = list(range(start_month, 13)) + list(range(1, end_month + 1))
-
-        candidates = [m for m in valid_months if m > current_month]
-        if candidates:
-            next_valid_month = min(candidates)
-            next_year = current_year
-        else:
-            next_valid_month = valid_months[0]
-            next_year = current_year + 1
-
-        suggested_date = datetime(next_year, next_valid_month, 1)
-        message = None
-
-        # Validate planting date
-        is_ideal = (
-            (start_month <= planting_date.month <= end_month) 
-            if start_month <= end_month 
-            else (planting_date.month >= start_month or planting_date.month <= end_month)
-        )
-
-        # Check if the user's selected date is within or outside the season
-        if planting_date > current_date and not is_ideal:
-            suggested_date = datetime(next_year + 1, next_valid_month, 1)
-            message = (
-                f"⚠️ The best time to plant this crop is between {calendar.month_name[start_month]}-{calendar.month_name[end_month]}. "
-                f"Consider planting next year on: {suggested_date.strftime('%d %B, %Y')}"
-            )
-        elif planting_date <= current_date and not is_ideal:
-            message = (
-                f"⚠️ The best time to plant this crop is between {calendar.month_name[start_month]}-{calendar.month_name[end_month]}. "
-                f"The season starts on: {suggested_date.strftime('%d %B, %Y')}"
-            )
-        else:
-            message = (
-                f"You're currently on the optimal timeline for planting! The best time to grow is between {calendar.month_name[start_month]}-{calendar.month_name[end_month]}. "
-                f"You can start planting this crop."
-            )
-
-        # Calculate timeline
-        elapsed_days = (current_date - planting_date).days
-        elapsed_weeks = elapsed_days // 7
-        current_week = max(elapsed_weeks + 1, 1)  # Ensure minimum week 1
-        growth_months = crop_data['Growth Season (Months)']
-        total_weeks = int(growth_months * 4)
-        total_days = int(growth_months * 30)
-        harvest_date = planting_date + timedelta(days=total_days)
-
-        # Generate recommendations
-        recommendations = {
-            'crop': selected_crop.title(),
-            'current_week': min(current_week, total_weeks),
-            'total_weeks': total_weeks,
-            'weekly_plan': [],
-            'actions': []
-        }
-
-        # Weekly plan logic
-        for week in range(recommendations['current_week'], total_weeks + 1):
-            month = ((week - 1) // 4) + 1
-            month = max(min(month, 12), 1)  # Clamp between 1-12
-            
-            water_key = f'Water Needs (mm) - Month {month}'
-            if water_key not in crop_data:
-                continue
-
-            weekly_plan_entry = {
-                'week': week,
-                'water': crop_data[water_key],
-                'air_temp': f"{crop_data['Min Temp (°C)']}-{crop_data['Max Temp (°C)']}°C",
-                'soil_temp': f"{crop_data['Min Soil Temp (°C)']}-{crop_data['Max Soil Temp (°C)']}°C"
-            }
-            recommendations['weekly_plan'].append(weekly_plan_entry)
-
-        # Get Soil data
-        try:
-            ph_value = get_ph_value(weather_json)
-            soil_data = fetch_soil_data_selenium(weather_data['lon'], weather_data['lat'])
-            # ... (soil data parsing logic)
-        except Exception as e:
-            ph_value = 5.8
-            soil_temperature = soil_moisture = None
-
-        return render_template(
-            'care_plan.html',
-            recommendations=recommendations,
-            harvest_date=harvest_date.strftime('%d %B, %Y'),
-            weeks_remaining=total_weeks - recommendations['current_week'],
-            future_planting_message=message,
-            ph_value=ph_value,
-            location=location,
-            today=datetime.now().strftime('%Y-%m-%d')
-        )
 
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
 
@@ -717,7 +587,7 @@ def care_plan():
 
 
 @app.route('/chatbot', methods=['GET', 'POST'])
-def chatbot():
+def chatbot():s
     
     # On reload (GET), clear chat history (start a new session)
     if request.method == 'GET':
@@ -857,6 +727,7 @@ def get_user_chats(user_email):
         ScanIndexForward=False  # Most recent first
     )
     return response.get('Items', [])
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
