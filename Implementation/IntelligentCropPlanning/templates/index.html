@@ -11,8 +11,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poiret+One">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.9/css/weather-icons.min.css">
-
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="/static/style.css">
+
 
     {% if title %}
         <title>Intelligent Crop - {{ title }}</title>
@@ -88,8 +90,7 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarToggle">
             <div class="navbar-nav mr-auto">
-                <a class="nav-item nav-link" href="/">Home</a>
-                <a class="nav-item nav-link" href="/about">About</a>
+               
             </div>
 
             <div class="navbar-nav">
@@ -184,7 +185,7 @@
               font-family: 'Segoe UI', sans-serif;
               text-align: left;
             ">
-              <div style="color: #34a0a4; font-size: 3rem; font-weight: 800; line-height: 1.2; text-transform: uppercase;">
+              <div class="title-blue">
                 The<br>
                 Farm-Advisor<br>
                 Chatbot
@@ -209,6 +210,65 @@
               onmouseover="this.style.backgroundColor='#168aad'" 
               onmouseout="this.style.backgroundColor='#34a0a4'">
                 Try It
+              
+              </button></a>
+            </div>
+        <div style="
+              max-width: 550px;
+              margin: 2rem auto;
+              background-color: #ffffff;
+              border-radius: 24px;
+              box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+              padding: 1.5rem;
+              font-family: 'Segoe UI', sans-serif;
+              text-align: left;
+            ">
+              <div style="color: #34a0a4; font-size: 3rem; font-weight: 800; line-height: 1.2; text-transform: uppercase;">
+                GET A<br>
+                GROWTH PLAN <br>
+                FOR ANY CROP
+              </div><BR/>
+
+              <div class="feature-checklist">
+                  <div class="feature-item">
+                      <span class="material-symbols-outlined feature-icon">check_circle</span>
+                      <span>Create a growth plan for another crop</span>
+                  </div><BR/>
+                  <div class="feature-item">
+                      <span class="material-symbols-outlined feature-icon">check_circle</span>
+                      <span>Get weekly water and sunlight requirements</span>
+                  </div><BR/>
+                  <div class="feature-item">
+                      <span class="material-symbols-outlined feature-icon">check_circle</span>
+                      <span>Get temperatures required by the crop</span>
+                  </div><BR/>
+                  <div class="feature-item">
+                      <span class="material-symbols-outlined feature-icon">check_circle</span>
+                      <span>Get weekly tasks checklist</span>
+                  </div><BR/>
+                  <div class="feature-item">
+                      <span class="material-symbols-outlined feature-icon">check_circle</span>
+                      <span>And download your plan</span>
+                  </div><BR/>
+              </div>
+
+
+              <a href="/care-plan">
+              <button style="
+                margin-top: 1.5rem;
+                padding: 0.8rem 1.6rem;
+                font-size: 1rem;
+                font-weight: 600;
+                background-color: #76C893;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+              " 
+              onmouseover="this.style.backgroundColor='#168aad'" 
+              onmouseout="this.style.backgroundColor='#34a0a4'">
+                Go
               
               </button></a>
             </div>
@@ -296,8 +356,11 @@
     <br/><br/>
 <div class="container mt-4">
     <center>
-    <div style="color: #52B69A; font-size: 3rem; font-weight: 600; line-height: 1.2; ">
-          Best Crops to grow in {{ location }}  
+    <div style="color: #99D98C; font-size: 3rem; font-weight: 500; line-height: 1.2; margin-top: 2rem;">
+          Best crops to grow in <br/>
+          <div class="title-blue">
+          {{ location }}  
+        </div>
     </div>
     </center><br/><br/>
     <div class="row" id="cropRecommendations">
@@ -312,7 +375,6 @@
             </div>
         </div>
         {% endfor %}
-        <br/><br/><br/><br/><hr>
     </div>
 
     
@@ -740,7 +802,6 @@
 
 
         /* new javascript for cards */
-        // Add to the existing script
 function showCropDetails(cropName) {
     const location = "{{ location }}";
     
@@ -910,7 +971,7 @@ function renderCharts(data) {
     
     // Show loading state
     const originalText = this.innerHTML;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     this.disabled = true;
     
     try {
