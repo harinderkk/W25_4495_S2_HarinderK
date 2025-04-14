@@ -32,7 +32,7 @@ You should see the homepage of the application.
 
 # Usage
 
-1. 1.	After going to the UR : http://127.0.0.1:5000, the user can see the recommended crops and soil conditions of their location.
+1. After going to the URL : http://127.0.0.1:5000, the user can see the recommended crops and soil conditions of their location.
 
 2.	To go to the chatbot the user must click on the “Try it” button. An AI powered virtual assistant that is similar to ChatGPT, this chatbot allows users to ask detailed questions about crop cultivation, pest management, irrigation systems, and more. 
  
