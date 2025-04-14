@@ -6,11 +6,17 @@ Student ID: 300363980
 # Installing required libraries
 
 pip install flask
+
 pip install requests
+
 pip install httpx
+
 pip install selenium
+
 pip install dotenv
+
 pip install openai
+
 pip install uuid
 
 
