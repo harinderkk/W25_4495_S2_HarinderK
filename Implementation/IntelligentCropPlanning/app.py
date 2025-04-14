@@ -56,7 +56,7 @@ client = OpenAI(
 )
 
 
-# Get weather data in JSON format
+
 def get_weather_data(api_key, location):
     base_url = 'http://api.openweathermap.org/data/2.5/weather?'
     complete_url = base_url + 'q=' + location + '&appid=' + api_key + '&units=metric'
@@ -156,12 +156,14 @@ def get_ph_value(weather_data):
 def fetch_soil_data_selenium(lon, lat):
     
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  
-    chrome_options.add_argument("--disable-gpu") 
+    chrome_options.add_argument("--headless")  # Run in headless mode
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU acceleration (often needed for headless)
     chrome_options.add_argument("--window-size=1920,1080") 
     
     driver = webdriver.Chrome(options=chrome_options)
 
+
+    # Open the website
     url = f"https://soiltemperature.app/results?lat={lat}&lng={lon}"
     driver.get(url)
 
@@ -170,10 +172,11 @@ def fetch_soil_data_selenium(lon, lat):
     # Find all rows in the table
     rows = driver.find_elements(By.CLASS_NAME, 'row')
 
+    # Initialize a list to store the data
     soil_data = []
 
-    
-    for row in rows[1:]:  # Skip the first row (headerr)
+    # Iterate through each row
+    for row in rows[1:]:  # Skip the first row (header)
         # Find all columns in the row
         cols = row.find_elements(By.CLASS_NAME, 'col')
 
@@ -194,7 +197,7 @@ def fetch_soil_data_selenium(lon, lat):
 
     return soil_data
 
-# Get soil temprature adn moisture data
+
 def fetch_soil_temperature_history(latitude, longitude, days=30):
     """Fetch historical soil temperature data"""
     end_date = datetime.now().date()
@@ -216,7 +219,7 @@ def fetch_soil_temperature_history(latitude, longitude, days=30):
     return None
 
 
-# Create dynamo DB table
+
 def create_user_table():
     table = dynamodb.create_table(
         TableName='ChatUsers',
@@ -238,11 +241,10 @@ def create_user_table():
     table.wait_until_exists()
     print("Table created successfully!")
 
-#(Already run once to create table)
 #create_user_table()
 
 
-# Get user's IP address
+
 def get_public_ip():
     try:
         response = requests.get('https://api.ipify.org?format=json')
@@ -253,7 +255,7 @@ def get_public_ip():
         return "Could not fetch public IP."
 
 
-# Get location based on IP
+
 def get_location_from_ip(ip_address):
     try:
         response = requests.get(f'http://ip-api.com/json/{ip_address}').json()
@@ -301,7 +303,7 @@ def get_chat_response(messages):
     except Exception as e:
         return f"<p>Error: {str(e)}</p>"
 
-# Get 5 year temprature data from 2019-2024
+
 def get_5years_6month_temps(latitude, longitude):
     base_url = "https://archive-api.open-meteo.com/v1/archive"
     yearly_data = {}
@@ -323,7 +325,6 @@ def get_5years_6month_temps(latitude, longitude):
 
     return yearly_data
 
-# Summarize each month's data in 2019-2024
 def summarize_monthly_temps(yearly_data):
     summaries = {}
 
@@ -355,12 +356,11 @@ def summarize_monthly_temps(yearly_data):
 
     return summaries
 
-# Format data to get avergae tempratures like:
-# - April: 2019=12.5°C, 2020=13.1°C, 2021=11.8°C, 2022=14.2°C, 2023=15.0°C
 
 def format_prompt_summary(temp_summaries):
     prompt_lines = ["Historical April–October temperatures (2019–2023):"]
 
+    # - April: 2019=12.5°C, 2020=13.1°C, 2021=11.8°C, 2022=14.2°C, 2023=15.0°C
     for month in ["April", "May", "June", "July", "August", "September", "October"]:
         month_line = f"- {month}: "
         year_avgs = []
@@ -370,9 +370,9 @@ def format_prompt_summary(temp_summaries):
         prompt_lines.append(month_line + ", ".join(year_avgs))
 
 
-#======================================================================================
-#                                  APP ROUTES                                         #
-#======================================================================================
+#============================================================================
+#                                  APP ROUTES                               #
+#============================================================================
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -541,9 +541,11 @@ def index():
 
 
 
+
 @app.route('/crop-details')
 def crop_details():
     try:
+        # decode URL parameters
         crop_name = unquote(request.args.get('crop', ''))
         location = unquote(request.args.get('location', ''))
         
@@ -604,7 +606,7 @@ def crop_details():
         )
         print(response)
 
-        # JSON extraction
+        # Enhanced JSON extraction
         raw_response = response.choices[0].message.content
         json_str = re.sub(r'[\x00-\x1F]+', '', raw_response)  # Remove control characters
         json_str = re.search(r'\{.*\}', json_str, re.DOTALL).group()
@@ -624,7 +626,9 @@ def crop_details():
 
 @app.route('/care-plan', methods=['GET', 'POST'])
 def care_plan():
+
     return render_template('care_plan.html', today=datetime.now().strftime('%Y-%m-%d'))
+
 
 
 
@@ -665,12 +669,14 @@ def chatbot():
 
 
 
+
+
 @app.route('/clear_chat', methods=['POST'])
 def clear_chat():
     session.pop('chat_history', None)
     return redirect('/chatbot')
 
-
+    
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -687,6 +693,8 @@ def register():
         )
         return redirect(url_for('login'))
     return render_template('register.html')
+
+
 
 
 
@@ -738,11 +746,16 @@ def login():
 
 
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
+
+
+
+
 
 
 def save_chat_to_dynamodb(user_email, user_message, bot_response):
@@ -760,7 +773,7 @@ def get_user_chats(user_email):
     response = chat_table.query(
         IndexName='user_email-timestamp-index',  # Assumes GSI on user_email + timestamp
         KeyConditionExpression=boto3.dynamodb.conditions.Key('user_email').eq(user_email),
-        ScanIndexForward=False  
+        ScanIndexForward=False  # Most recent first
     )
     return response.get('Items', [])
 
